@@ -6,7 +6,6 @@ import { GLOBAL_PRODUCTS, STORE_LISTINGS } from '../../data/products';
 import ProductCard from '../../components/customer/ProductCard';
 import StoreCard from '../../components/customer/StoreCard';
 import CategoryCard from '../../components/customer/CategoryCard';
-import Button from '../../components/shared/Button';
 
 /**
  * Screen 1: Customer Home / Discovery

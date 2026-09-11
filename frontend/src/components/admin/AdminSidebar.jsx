@@ -1,9 +1,11 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import Logo from '../shared/Logo';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AdminSidebar() {
   const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
 
   const navGroups = [
     {
@@ -171,8 +173,12 @@ export default function AdminSidebar() {
             Platform v2.4 Live
           </span>
           <button
-            onClick={() => navigate('/login')}
-            style={{ color: '#64748B', display: 'flex', alignItems: 'center', gap: '2px' }}
+            type="button"
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+            style={{ color: '#64748B', display: 'flex', alignItems: 'center', gap: '2px', background: 'none', border: 'none', cursor: 'pointer' }}
             title="Log out"
           >
             <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
@@ -208,13 +214,15 @@ export default function AdminSidebar() {
               flexShrink: 0,
             }}
           >
-            VM
+            {currentUser?.avatar || 'VM'}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <span style={{ fontSize: '12px', fontWeight: 600, color: '#172033', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-              Vikram Malhotra
+              {currentUser?.name || 'Vikram Malhotra'}
             </span>
-            <span style={{ fontSize: '10px', color: '#64748B' }}>Super Admin</span>
+            <span style={{ fontSize: '10px', color: '#64748B' }}>
+              {currentUser?.title || 'Super Admin'}
+            </span>
           </div>
         </div>
       </div>

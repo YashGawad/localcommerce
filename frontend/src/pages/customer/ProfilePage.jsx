@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { MOCK_CUSTOMER, MOCK_ADDRESSES } from '../../data/customers';
 import AddressCard from '../../components/customer/AddressCard';
 
@@ -9,15 +10,23 @@ import AddressCard from '../../components/customer/AddressCard';
  * Supports adding, editing, deleting, and setting default address.
  */
 export default function ProfilePage() {
+  const { currentUser, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
+
   const [customer] = useState(MOCK_CUSTOMER);
   const [addresses, setAddresses] = useState(MOCK_ADDRESSES);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
 
+  const displayName = currentUser?.name || customer.name;
+  const displayEmail = currentUser?.email || customer.email;
+  const displayPhone = currentUser?.phone || customer.phone;
+  const displayAvatar = currentUser?.avatar || (displayName ? displayName.split(' ').map((n) => n[0]).join('').slice(0, 2) : 'AT');
+
   // Address form fields
   const [formType, setFormType] = useState('Home');
-  const [formName, setFormName] = useState('Amit Trivedi');
-  const [formPhone, setFormPhone] = useState('+91 98201 44829');
+  const [formName, setFormName] = useState(displayName);
+  const [formPhone, setFormPhone] = useState(displayPhone);
   const [formAddressLine, setFormAddressLine] = useState('');
   const [formArea, setFormArea] = useState('Panch Pakhadi');
   const [formCity, setFormCity] = useState('Thane West');
@@ -163,17 +172,17 @@ export default function ProfilePage() {
                   flexShrink: 0,
                 }}
               >
-                AT
+                {displayAvatar}
               </div>
               <div>
                 <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#172554', margin: 0 }}>
-                  {customer.name}
+                  {displayName}
                 </h2>
                 <span style={{ fontSize: '13px', color: '#64748B', display: 'block' }}>
-                  {customer.email}
+                  {displayEmail}
                 </span>
                 <span style={{ fontSize: '12px', color: '#64748B', display: 'block' }}>
-                  {customer.phone}
+                  {displayPhone}
                 </span>
               </div>
             </div>
@@ -292,6 +301,43 @@ export default function ProfilePage() {
               </span>
               <span>Help &amp; Customer Support</span>
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (isAuthenticated) {
+                  logout();
+                  navigate('/login');
+                } else {
+                  navigate('/login');
+                }
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                color: isAuthenticated ? '#DC2626' : '#2563EB',
+                backgroundColor: 'transparent',
+                border: 'none',
+                width: '100%',
+                textAlign: 'left',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: 600,
+                borderTop: '1px solid #F1F5F9',
+                marginTop: '4px',
+              }}
+            >
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: '20px', color: isAuthenticated ? '#DC2626' : '#2563EB' }}
+              >
+                {isAuthenticated ? 'logout' : 'login'}
+              </span>
+              <span>{isAuthenticated ? 'Sign Out' : 'Sign In'}</span>
+            </button>
           </div>
 
           {/* Nearby Kiranas Mini-Widget */}

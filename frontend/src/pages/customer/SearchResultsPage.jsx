@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { GLOBAL_PRODUCTS, STORE_LISTINGS } from '../../data/products';
 import { MOCK_STORES } from '../../data/stores';
 import ProductCard from '../../components/customer/ProductCard';
@@ -12,7 +12,7 @@ import Badge from '../../components/shared/Badge';
  * Demonstrates cross-store discovery: searching "milk" shows matching products and which stores offer them.
  */
 export default function SearchResultsPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const rawQuery = searchParams.get('q');
   const query = rawQuery !== null ? rawQuery : 'milk'; // Default to "milk" per Stitch demonstration
 

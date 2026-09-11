@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../shared/Logo';
 import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
 
 export default function CustomerHeader() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,6 +16,7 @@ export default function CustomerHeader() {
   };
 
   const { itemCount, total } = useCart();
+  const { currentUser, isAuthenticated } = useAuth();
 
   return (
     <>
@@ -231,7 +233,7 @@ export default function CustomerHeader() {
             </Link>
 
             <Link
-              to="/profile"
+              to={isAuthenticated ? '/profile' : '/login'}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -247,7 +249,7 @@ export default function CustomerHeader() {
               <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#64748B' }}>
                 person
               </span>
-              <span>Account</span>
+              <span>{isAuthenticated ? (currentUser?.name?.split(' ')[0] || 'Account') : 'Sign In'}</span>
             </Link>
 
             <Link
@@ -274,7 +276,7 @@ export default function CustomerHeader() {
             </Link>
 
             <Link
-              to="/profile"
+              to={isAuthenticated ? '/profile' : '/login'}
               style={{
                 width: '32px',
                 height: '32px',
@@ -285,12 +287,18 @@ export default function CustomerHeader() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 textDecoration: 'none',
+                fontSize: '11px',
+                fontWeight: 700,
               }}
-              title="View Profile"
+              title={isAuthenticated ? 'View Profile' : 'Sign In'}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                person
-              </span>
+              {isAuthenticated && currentUser?.avatar ? (
+                currentUser.avatar
+              ) : (
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                  person
+                </span>
+              )}
             </Link>
           </div>
         </div>

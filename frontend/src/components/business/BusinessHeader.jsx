@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../shared/Logo';
 import { MOCK_STORES } from '../../data/stores';
+import { useAuth } from '../../context/AuthContext';
+import { useCatalog } from '../../context/CatalogContext';
 
 export default function BusinessHeader({ onOpenNav }) {
-  const [selectedStore, setSelectedStore] = useState(MOCK_STORES[0]);
-  const [isOnline, setIsOnline] = useState(true);
+  const { currentStore: selectedStore, setCurrentStore: setSelectedStore, isOnline, setIsOnline } = useCatalog();
   const [isStoreSwitcherOpen, setIsStoreSwitcherOpen] = useState(false);
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
 
   return (
     <header
@@ -353,7 +355,7 @@ export default function BusinessHeader({ onOpenNav }) {
               }}
               title="Account Options"
             >
-              SS
+              {currentUser?.avatar || 'SS'}
             </button>
 
             {isProfileMenuOpen && (
@@ -373,8 +375,12 @@ export default function BusinessHeader({ onOpenNav }) {
                 }}
               >
                 <div style={{ padding: '8px 12px', borderBottom: '1px solid #F1F5F9' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#172033' }}>Suresh Sharma</div>
-                  <div style={{ fontSize: '11px', color: '#64748B' }}>Store Owner</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#172033' }}>
+                    {currentUser?.name || 'Suresh Sharma'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#64748B' }}>
+                    {currentUser?.role === 'staff' ? 'Staff Member' : 'Store Owner'}
+                  </div>
                 </div>
                 <Link
                   to="/business/settings"
@@ -391,8 +397,10 @@ export default function BusinessHeader({ onOpenNav }) {
                   Switch to Customer App
                 </Link>
                 <button
+                  type="button"
                   onClick={() => {
                     setIsProfileMenuOpen(false);
+                    logout();
                     navigate('/login');
                   }}
                   style={{
@@ -402,6 +410,11 @@ export default function BusinessHeader({ onOpenNav }) {
                     fontSize: '12px',
                     color: '#EF4444',
                     borderTop: '1px solid #F1F5F9',
+                    backgroundColor: 'transparent',
+                    borderLeft: 'none',
+                    borderRight: 'none',
+                    borderBottom: 'none',
+                    cursor: 'pointer',
                   }}
                 >
                   Log Out

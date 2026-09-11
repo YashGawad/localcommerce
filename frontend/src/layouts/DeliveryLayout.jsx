@@ -1,8 +1,12 @@
 import React from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
 import Logo from '../components/shared/Logo';
+import { useAuth } from '../context/AuthContext';
 
 export default function DeliveryLayout() {
+  const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#F8F9FF' }}>
       {/* Delivery Header */}
@@ -38,9 +42,38 @@ export default function DeliveryLayout() {
             <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981' }} />
             On Duty
           </div>
+
+          <span style={{ color: '#E2E8F0', fontWeight: 600 }}>
+            {currentUser?.name || 'Ramesh Patil'}
+          </span>
+
           <Link to="/" style={{ color: '#93C5FD', textDecoration: 'none' }}>
             Storefront
           </Link>
+
+          <button
+            type="button"
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              color: '#FCA5A5',
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '12px',
+            }}
+            title="Log Out"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>
+              logout
+            </span>
+            <span>Exit</span>
+          </button>
         </div>
       </header>
 
