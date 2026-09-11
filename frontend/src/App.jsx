@@ -47,6 +47,8 @@ import BusinessCustomerDetailsPage from './pages/business/BusinessCustomerDetail
 import BusinessStaffPage from './pages/business/BusinessStaffPage';
 import BusinessDiscountsPage from './pages/business/BusinessDiscountsPage';
 import BusinessAnalyticsPage from './pages/business/BusinessAnalyticsPage';
+import BusinessNotificationsPage from './pages/business/BusinessNotificationsPage';
+import BusinessSettingsPage from './pages/business/BusinessSettingsPage';
 import BusinessPlaceholderPage from './pages/business/BusinessPlaceholderPage';
 
 // Admin Pages
@@ -109,6 +111,8 @@ export default function App() {
               <Route path="staff" element={<BusinessStaffPage />} />
               <Route path="discounts" element={<BusinessDiscountsPage />} />
               <Route path="analytics" element={<BusinessAnalyticsPage />} />
+              <Route path="notifications" element={<BusinessNotificationsPage />} />
+              <Route path="settings" element={<BusinessSettingsPage />} />
               <Route path=":section" element={<BusinessPlaceholderPage />} />
               <Route path=":section/:id" element={<BusinessPlaceholderPage />} />
             </Route>

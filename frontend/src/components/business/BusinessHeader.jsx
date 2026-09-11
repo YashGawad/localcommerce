@@ -4,6 +4,7 @@ import Logo from '../shared/Logo';
 import { MOCK_STORES } from '../../data/stores';
 import { useAuth } from '../../context/AuthContext';
 import { useCatalog } from '../../context/CatalogContext';
+import { useNotifications } from '../../context/NotificationsContext';
 
 export default function BusinessHeader({ onOpenNav }) {
   const { currentStore: selectedStore, setCurrentStore: setSelectedStore, isOnline, setIsOnline } = useCatalog();
@@ -12,6 +13,7 @@ export default function BusinessHeader({ onOpenNav }) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
+  const { unreadCount } = useNotifications();
 
   return (
     <header
@@ -320,17 +322,28 @@ export default function BusinessHeader({ onOpenNav }) {
             <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
               notifications
             </span>
-            <span
-              style={{
-                position: 'absolute',
-                top: '4px',
-                right: '4px',
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                backgroundColor: '#EF4444',
-              }}
-            />
+            {unreadCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  right: '2px',
+                  minWidth: '15px',
+                  height: '15px',
+                  borderRadius: '10px',
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 3px',
+                }}
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </Link>
 
           {/* Owner Profile Avatar (Strictly for account options) */}

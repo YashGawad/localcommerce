@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useMemo } from 'react';
 import { MOCK_STORES } from '../data/stores';
 import { GLOBAL_PRODUCTS } from '../data/products';
 import { MOCK_CATEGORIES } from '../data/categories';
+import { INITIAL_STORE_SETTINGS } from '../data/storeSettings';
 
 /**
  * Standardized Inventory Status Rule:
@@ -210,7 +211,47 @@ const CatalogContext = createContext(null);
 export function CatalogProvider({ children }) {
   // Currently selected store (defaults to Sharma Supermarket)
   const [currentStore, setCurrentStore] = useState(MOCK_STORES[0]);
-  const [isOnline, setIsOnline] = useState(true);
+
+  // Store settings dictionary keyed by storeId
+  const [storeSettingsMap, setStoreSettingsMap] = useState(INITIAL_STORE_SETTINGS);
+
+  // Store settings belonging to the currently active store
+  const storeSettings = useMemo(() => {
+    return (
+      storeSettingsMap[currentStore.id] ||
+      INITIAL_STORE_SETTINGS[currentStore.id] || {
+        storeId: currentStore.id,
+        storeName: currentStore.name,
+        acceptingOrders: true,
+      }
+    );
+  }, [storeSettingsMap, currentStore.id, currentStore.name]);
+
+  // Store online/offline availability synchronized directly with storeSettings.acceptingOrders
+  const isOnline = storeSettings.acceptingOrders !== undefined ? storeSettings.acceptingOrders : true;
+
+  const updateStoreSettings = (updatedFields) => {
+    setStoreSettingsMap((prev) => {
+      const current =
+        prev[currentStore.id] ||
+        INITIAL_STORE_SETTINGS[currentStore.id] || {
+          storeId: currentStore.id,
+          storeName: currentStore.name,
+          acceptingOrders: true,
+        };
+      return {
+        ...prev,
+        [currentStore.id]: {
+          ...current,
+          ...updatedFields,
+        },
+      };
+    });
+  };
+
+  const setIsOnline = (val) => {
+    updateStoreSettings({ acceptingOrders: !!val });
+  };
 
   // Store-specific products dictionary keyed by storeId
   const [storeProductsMap, setStoreProductsMap] = useState(INITIAL_STORE_PRODUCTS);
@@ -376,6 +417,8 @@ export function CatalogProvider({ children }) {
     updateCategory,
     deleteCategory,
     calculateStockStatus,
+    storeSettings,
+    updateStoreSettings,
   };
 
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>;

@@ -19,6 +19,246 @@ import { MOCK_STAFF } from '../data/staff';
 const INITIAL_STORE_ORDERS = {
   store_01: [
     {
+      id: 'LC-10484',
+      orderNumber: '#LC-10484',
+      storeId: 'store_01',
+      storeName: 'Sharma Supermarket',
+      status: 'OUT_FOR_DELIVERY',
+      statusLabel: 'Out for Delivery',
+      statusBadgeVariant: 'warning',
+      fulfillmentType: 'delivery',
+      fulfillmentLabel: 'Express Run (30 min)',
+      placedAt: 'Today, 10:15 AM',
+      estimatedDelivery: 'Today, 10:52 AM (In 4 mins)',
+      deliveredAt: null,
+      subtotal: 323,
+      deliveryFee: 25,
+      discount: 20,
+      platformFee: 0,
+      taxes: 12,
+      total: 340,
+      paymentMethod: 'UPI',
+      paymentDetails: 'Razorpay UPI (ID: pay_Okj82Vf9)',
+      paymentStatus: 'PAID',
+      amountToCollect: 0,
+      invoiceNumber: '#INV-99014',
+      distance: '1.2 km',
+      sector: 'Koramangala • 1.2 km away',
+      promisedTime: '11:15 AM',
+      assignedTime: '10:42 AM',
+      thermalSeal: 'Pass (Seal #402-V)',
+      totalWeight: '~2.85 kg',
+      customer: {
+        id: 'cust_sharma_02',
+        name: 'Rahul Sharma',
+        phone: '+91 98765 43210',
+        email: 'rahul.sharma@example.com',
+        tier: 'Gold Tier',
+        pastOrdersCount: 42,
+        address: 'Flat 402, Green Glen Apartments, 17th Main Road, 4th Block, Koramangala, Bengaluru, KA 560034',
+        streetAddress: 'Flat 402, Green Glen Apartments\n17th Main Road, 4th Block\nKoramangala, Bengaluru, KA 560034',
+        landmark: 'Opposite Koramangala Club Gate 2',
+        customerNote: 'Please buzz Apartment 402 on the intercom at the main gate. If not answering bell, please call on phone. Do not leave bags in direct sun.',
+      },
+      deliveryPartner: {
+        id: 'staff_shm_05',
+        name: 'Vikram Rao',
+        initials: 'VR',
+        code: '#DEL-04',
+        phone: '+91 98205 33445',
+        role: 'Dedicated Store Delivery Partner',
+        vehicle: 'Two-wheeler (KA-01-EQ-9841)',
+        status: 'In-transit with thermal crate',
+      },
+      items: [
+        {
+          id: 'item_84_01',
+          productId: 'shm_prod_amul_taaza',
+          title: 'Amul Taaza Homogenised Milk',
+          unit: 'Volume: 1 Litre Tetra Pak',
+          quantity: 2,
+          price: 54,
+          total: 108,
+          handlingNote: 'Chilled 4°C',
+          image: 'https://lh3.googleusercontent.com/aida/AEtjO1VVsaS-NlV_iizo17KBfTVuGAaanpyY2CDU9p_bkZi5H5HHm-Zs5vkR4b45iuhSP93NY0Wkl9wj43SgRNfTU0HHyFtoHF58-nEW_ZHvJvo_l5094O-UlcNPsvKaDIlLvj-3Q3OKmG8-eeJK_EKg77JRsOA0oYUmkyWjk8RBjHolT0U9nokpEpGDmLtB7fmT3czI-eKsPMvpplTUQceZxAZIlPOlt-ZdJyv4qUtYVpDY1PY6Qkup3p74',
+        },
+        {
+          id: 'item_84_02',
+          productId: 'shm_prod_brown_bread',
+          title: 'Britannia Whole Wheat Bread',
+          unit: 'Net Weight: 400g Fresh Loaf',
+          quantity: 1,
+          price: 45,
+          total: 45,
+          handlingNote: 'Crush Fragile',
+          image: 'https://lh3.googleusercontent.com/aida/AEtjO1VddSV2lNmD7RpeuAqExrt8gj-Qmmuvb9gMbJf6wVnOURW0BzidpwnTCPVBeo6zjLBPHCWMoBEkMq3ZPGGA-Fp171Kjv3peivN17ay4_iJb_ZbWIERNnz0vLbB9fykI7hF9nR7CsBxkOGNlYPvdXYZP8AMcjlEcMkjp2C8kO5QiVXtUh4n1x2-Bg7-uqBOB-e6SO1DWz_VD1oX3FiK8_z6qI8Jtt4iGDUJidyYssqXwHDXo1ROUmCtgZg',
+        },
+        {
+          id: 'item_84_03',
+          productId: 'shm_prod_eggs',
+          title: 'Fresh Farm White Eggs',
+          unit: 'Pack of 6 Tray',
+          quantity: 1,
+          price: 65,
+          total: 65,
+          handlingNote: 'Cushioned Top',
+          image: 'https://lh3.googleusercontent.com/aida/AEtjO1W-Fy1SasZSUdbaW9IgDyhnoCodVMhFLE_ZiwibzUdJgqphI27EbXd5g0nZMLK_0YPtq0xYM-bTWWYLOk9A2an9QJkdH-SPGdmVkIZyCCh8RUezk9I_8PF0ts4lfDvyu-5PUJCC263Vap-ppXflFXrk05FoufQM_oCOPzuUjedLuWNulc7QOcjTOSO5KbRlMGMHwhRjZ0rlXuVaegxiOCdVvMWQAfP-ulLcXX4p5CsVgsh-xHyh_es_',
+        },
+        {
+          id: 'item_84_04',
+          productId: 'shm_prod_yogurt',
+          title: 'Epigamia Greek Yogurt (Blueberry)',
+          unit: '100g Individual Cups',
+          quantity: 3,
+          price: 40,
+          total: 120,
+          handlingNote: 'Keep Cold',
+          image: 'https://lh3.googleusercontent.com/aida/AEtjO1WWaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz00112233445566778899aabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz',
+        },
+      ],
+      timeline: [
+        { step: 1, label: 'Order Ready & Packed', time: '10:15 AM', completed: true, note: 'Packed at Counter Rack B-2 by Suresh Sharma. Verified 4 line items into insulated thermal crate #4.' },
+        { step: 2, label: 'Dispatched via Express Rider', time: '10:30 AM', completed: true, note: 'Handed over to Vikram Rao (Two-wheeler KA-01-EQ-9841). Temperature log verified: Cold chain locked at 4°C.' },
+        { step: 3, label: 'Out for Delivery (In Transit)', time: '10:42 AM', completed: true, current: true, note: 'Rider is 350 meters away from Green Glen Apartments. Navigating 17th Main Road, Koramangala 4th Block.' },
+        { step: 4, label: 'Completed Handover', time: 'Pending OTP Verification', completed: false, note: 'Awaiting 4-digit recipient PIN or signed proof-of-delivery from Flat 402.' },
+      ],
+    },
+    {
+      id: 'LC-10483',
+      orderNumber: '#LC-10483',
+      storeId: 'store_01',
+      storeName: 'Sharma Supermarket',
+      status: 'READY',
+      statusLabel: 'Ready for Dispatch',
+      statusBadgeVariant: 'primary',
+      fulfillmentType: 'delivery',
+      fulfillmentLabel: 'Standard Delivery',
+      placedAt: 'Today, 10:20 AM',
+      estimatedDelivery: 'Today, 11:45 AM',
+      deliveredAt: null,
+      subtotal: 248,
+      deliveryFee: 25,
+      discount: 0,
+      platformFee: 0,
+      taxes: 0,
+      total: 273,
+      paymentMethod: 'Cash on Delivery',
+      paymentDetails: 'Collect cash at door',
+      paymentStatus: 'PENDING',
+      amountToCollect: 273,
+      invoiceNumber: '#INV-99013',
+      distance: '1.8 km',
+      sector: 'Koramangala • 1.8 km away',
+      promisedTime: '11:45 AM',
+      dockTime: '10:35 AM',
+      customer: {
+        id: 'cust_sneha_r',
+        name: 'Sneha Reddy',
+        phone: '+91 98450 11223',
+        email: 'sneha.reddy@example.com',
+        pastOrdersCount: 5,
+        address: '#88, 5th Cross, 6th Block, Koramangala, Bangalore 560095',
+        streetAddress: '#88, 5th Cross, 6th Block, Koramangala, Bangalore 560095',
+        landmark: 'Near 6th Block BBMP Office',
+        customerNote: 'Keep change for ₹500 if possible.',
+      },
+      deliveryPartner: {
+        id: 'staff_shm_05',
+        name: 'Vikram Rao',
+        initials: 'VR',
+        code: '#DEL-04',
+        phone: '+91 98205 33445',
+        role: 'Dedicated Store Delivery Partner',
+      },
+      items: [
+        {
+          id: 'item_83_01',
+          productId: 'shm_prod_aashirvaad_atta',
+          title: 'Aashirvaad Superior MP Shudh Chakki Atta',
+          unit: '5 kg Pack',
+          quantity: 1,
+          price: 245,
+          total: 245,
+          handlingNote: 'Standard Dry',
+        },
+        {
+          id: 'item_83_02',
+          productId: 'shm_prod_tata_salt',
+          title: 'Tata Salt Vacuum Evaporated Iodised Salt',
+          unit: '1 kg Pouch',
+          quantity: 1,
+          price: 28,
+          total: 28,
+          handlingNote: 'Standard Dry',
+        },
+      ],
+      timeline: [
+        { step: 1, label: 'Order Placed', time: '10:20 AM', completed: true },
+        { step: 2, label: 'Confirmed by Store', time: '10:22 AM', completed: true },
+        { step: 3, label: 'Order Ready & Packed', time: '10:35 AM', completed: true, current: true, note: 'Ready at dispatch dock' },
+        { step: 4, label: 'Out for Delivery', time: 'Pending', completed: false },
+        { step: 5, label: 'Delivered', time: 'Pending', completed: false },
+      ],
+    },
+    {
+      id: 'LC-10478',
+      orderNumber: '#LC-10478',
+      storeId: 'store_01',
+      storeName: 'Sharma Supermarket',
+      status: 'DELIVERED',
+      statusLabel: 'Delivered',
+      statusBadgeVariant: 'success',
+      fulfillmentType: 'delivery',
+      fulfillmentLabel: 'Delivered Cycle 1',
+      placedAt: 'Today, 8:15 AM',
+      estimatedDelivery: 'Today, 9:24 AM',
+      deliveredAt: 'Today, 09:10 AM',
+      subtotal: 74,
+      deliveryFee: 25,
+      discount: 0,
+      platformFee: 0,
+      taxes: 0,
+      total: 99,
+      paymentMethod: 'UPI',
+      paymentDetails: 'Pre-paid UPI • Google Pay',
+      paymentStatus: 'PAID',
+      amountToCollect: 0,
+      invoiceNumber: '#INV-99008',
+      distance: '2.1 km',
+      sector: 'Koramangala • 2.1 km',
+      deliveredTime: 'Delivered 09:10 AM',
+      deliveredNote: 'On-time (14m ahead)',
+      customer: {
+        id: 'cust_anita_d',
+        name: 'Anita Desai',
+        phone: '+91 98111 22334',
+        email: 'anita.desai@example.com',
+        pastOrdersCount: 9,
+        address: '1st Main, ST Bed Layout, Koramangala, Bangalore 560034',
+      },
+      deliveryPartner: {
+        id: 'staff_shm_05',
+        name: 'Vikram Rao',
+        initials: 'VR',
+        code: '#DEL-04',
+      },
+      items: [
+        {
+          id: 'item_78_01',
+          title: 'Snacks & Pantry Bundle',
+          quantity: 2,
+          price: 37,
+          total: 74,
+        },
+      ],
+      timeline: [
+        { step: 1, label: 'Order Placed', time: '8:15 AM', completed: true },
+        { step: 2, label: 'Order Packed', time: '8:35 AM', completed: true },
+        { step: 3, label: 'Out for Delivery', time: '8:45 AM', completed: true },
+        { step: 4, label: 'Delivered', time: '9:10 AM', completed: true, current: true },
+      ],
+    },
+    {
       id: 'LC-10482',
       orderNumber: '#LC-10482',
       storeId: 'store_01',
@@ -624,11 +864,32 @@ export function OperationsProvider({ children }) {
   /**
    * Transition order status forward
    */
-  const updateOrderStatus = (orderId, nextStatus, extra = {}) => {
+  const updateOrderStatus = (orderId, nextStatus, extra = {}, targetStoreId = null) => {
     setOrdersMap((prev) => {
-      const storeList = prev[currentStore.id] || [];
+      // Find the store that holds this order
+      let resolvedStoreId = targetStoreId || currentStore.id;
+      if (!prev[resolvedStoreId]?.some((o) => o.id === orderId)) {
+        for (const [sKey, oList] of Object.entries(prev)) {
+          if (oList.some((o) => o.id === orderId)) {
+            resolvedStoreId = sKey;
+            break;
+          }
+        }
+      }
+
+      const storeList = prev[resolvedStoreId] || [];
       const updatedList = storeList.map((order) => {
         if (order.id === orderId) {
+          // Guard: Cannot transition backwards or change terminal statuses
+          if (order.status === 'DELIVERED' || order.status === 'PICKED_UP') {
+            console.warn(`Cannot change status of already completed order ${orderId} (${order.status})`);
+            return order;
+          }
+          if (order.status === 'CANCELLED') {
+            console.warn(`Cannot change status of cancelled order ${orderId}`);
+            return order;
+          }
+
           // Label and badge variant mapping
           let statusLabel = nextStatus;
           let statusBadgeVariant = 'info';
@@ -668,7 +929,8 @@ export function OperationsProvider({ children }) {
               stepLabelLower.includes(nextStatusLower) ||
               (nextStatus === 'READY_FOR_PICKUP' && stepLabelLower.includes('pickup') && stepLabelLower.includes('ready')) ||
               (nextStatus === 'PICKED_UP' && stepLabelLower.includes('picked up')) ||
-              (nextStatus === 'READY' && stepLabelLower.includes('dispatch'));
+              (nextStatus === 'READY' && (stepLabelLower.includes('dispatch') || stepLabelLower.includes('ready'))) ||
+              (nextStatus === 'DELIVERED' && (stepLabelLower.includes('handover') || stepLabelLower.includes('delivered')));
             if (isMatch) {
               return { ...step, completed: true, current: true, time: nowTime };
             }
@@ -680,6 +942,7 @@ export function OperationsProvider({ children }) {
             status: nextStatus,
             statusLabel,
             statusBadgeVariant,
+            deliveredAt: nextStatus === 'DELIVERED' ? `Today, ${nowTime}` : order.deliveredAt,
             ...extra,
             timeline: newTimeline,
           };
@@ -689,7 +952,7 @@ export function OperationsProvider({ children }) {
 
       return {
         ...prev,
-        [currentStore.id]: updatedList,
+        [resolvedStoreId]: updatedList,
       };
     });
   };
@@ -837,6 +1100,8 @@ export function OperationsProvider({ children }) {
   };
 
   const value = {
+    ordersMap,
+    staffList,
     storeOrders,
     updateOrderStatus,
     assignRider,
