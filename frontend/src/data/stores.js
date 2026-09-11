@@ -1,0 +1,107 @@
+/**
+ * LocalCommerce Multi-Tenant Store Data
+ * Enriched with real Stitch photography assets and operational metadata.
+ */
+
+export const MOCK_STORES = [
+  {
+    id: 'store_01',
+    name: 'Sharma Supermarket',
+    slug: 'sharma-supermarket',
+    category: 'Groceries & Provisions',
+    ownerName: 'Suresh Sharma',
+    location: 'Koramangala, Bangalore',
+    distance: '1.2 km away',
+    address: '14th Main, 4th Block, Koramangala, Bangalore - 560034',
+    rating: 4.8,
+    reviewCount: 142,
+    isOpen: true,
+    hours: '8:00 AM – 10:30 PM (Daily)',
+    fulfillmentTypes: ['delivery', 'pickup'],
+    deliveryTime: '25–35 mins',
+    pickupTime: '15 mins',
+    minOrder: 99,
+    deliveryFee: 25,
+    freeDeliveryAbove: 499,
+    phone: '+91 98201 44556',
+    pinCode: '560034',
+    image: 'https://lh3.googleusercontent.com/aida/AEtjO1VKR4729QyHxW0kkcNxBDZhH-wty74n_ny3zbeszCFIWXfKDZ79kAMW5Rw3XlkGlvrJKtTjrtC8ahKKTG2cmiorRexSgjwu6AYBNJsvXtX_Kyh_YW5Kzh5NcF0xLasyAjPbqatyboSo_2fAXhKX8QK8MDDFyToVVcS1Ft_mmQlakGs207gOD4sbL2N-pkcObBDgYRxJ3XhrpdilDFCPKa2GNVeMyJC5n8vbtLgFRwb0f-Ezg1R8f8c6',
+  },
+  {
+    id: 'store_02',
+    name: 'Shree Kirana & General Store',
+    slug: 'shree-kirana',
+    category: 'Daily Groceries & Staples',
+    ownerName: 'Ramesh Patel',
+    location: 'Panch Pakhadi, Thane West',
+    distance: '0.8 km away',
+    address: 'Shop 4, Ground Floor, Panch Pakhadi, Thane West - 400602',
+    rating: 4.9,
+    reviewCount: 238,
+    isOpen: true,
+    hours: '7:30 AM – 11:00 PM (Daily)',
+    fulfillmentTypes: ['delivery', 'pickup'],
+    deliveryTime: '20–30 mins',
+    pickupTime: '10 mins',
+    minOrder: 50,
+    deliveryFee: 20,
+    freeDeliveryAbove: 299,
+    phone: '+91 98210 99887',
+    pinCode: '400602',
+    image: 'https://lh3.googleusercontent.com/aida/AEtjO1X4iMmsdhkJD7NBcrcuSQnEPH6S3i5qHGBg1daygNXeBPFytV5s5S2t-3ULhs2ptAW1sTSp41UrOs9ZzDetmMNnDSB-G8Y26QR2vp6I2SCiuUdlPkSV9z5SgRK_Km2QfFgIuLk94WqOtGDlTuzLFjTRFr_WUNmp4WdroqatiVwL4CZktCgU18UNO01BnL45D1V9XAOGgGvOPDY9vcAchP3ken-q2BabCvtadyEGmVeNBrVYnAqCOBO7XA',
+  },
+  {
+    id: 'store_03',
+    name: 'Sharma Artisanal Bakery',
+    slug: 'sharma-bakery',
+    category: 'Bakery & Confectionery',
+    ownerName: 'Suresh Sharma',
+    location: 'Indiranagar, Bangalore',
+    distance: '1.5 km away',
+    address: '100ft Road, Indiranagar, Bangalore - 560038',
+    rating: 4.7,
+    reviewCount: 89,
+    isOpen: true,
+    hours: '7:00 AM – 10:00 PM (Daily)',
+    fulfillmentTypes: ['delivery', 'pickup'],
+    deliveryTime: '30–40 mins',
+    pickupTime: '15 mins',
+    minOrder: 150,
+    deliveryFee: 30,
+    freeDeliveryAbove: 599,
+    phone: '+91 98201 44558',
+    pinCode: '560038',
+    image: 'https://lh3.googleusercontent.com/aida/AEtjO1WX9fxIWlfJNp8kr04OUEL9GszvVTTtNPifrty_jMeI4mAnL4ej3-9V7QBoARwFNHPmOBlGT5D2VtUUDXgv8rJEt0O_G9IKqP161I8MmHdEhEgWaKcu2Gsf6iDWeOMLYQtDMbW-IU7sbgkjv8ZIYUIhri_rDkp-KWKCtXRgo4MbKYR37gm0SBF3isI_8FV200CP5Cz3EkUvwsJTvJgTcmNX2PUPi0LZYv7kve32E1YB79Q-xTEyVAvU',
+  },
+  {
+    id: 'store_04',
+    name: 'Fresh Greens Organics',
+    slug: 'fresh-greens-organics',
+    category: 'Fresh Produce & Fruits',
+    ownerName: 'Anita Desai',
+    location: 'HSR Layout, Bangalore',
+    distance: '2.4 km away',
+    address: 'Sector 2, 27th Main, HSR Layout, Bangalore - 560102',
+    rating: 4.6,
+    reviewCount: 64,
+    isOpen: false,
+    hours: '9:00 AM – 9:00 PM',
+    fulfillmentTypes: ['delivery'],
+    deliveryTime: '45–55 mins',
+    pickupTime: '30 mins',
+    minOrder: 200,
+    deliveryFee: 35,
+    freeDeliveryAbove: 699,
+    phone: '+91 98450 12345',
+    pinCode: '560102',
+    image: 'https://lh3.googleusercontent.com/aida/AEtjO1VKR4729QyHxW0kkcNxBDZhH-wty74n_ny3zbeszCFIWXfKDZ79kAMW5Rw3XlkGlvrJKtTjrtC8ahKKTG2cmiorRexSgjwu6AYBNJsvXtX_Kyh_YW5Kzh5NcF0xLasyAjPbqatyboSo_2fAXhKX8QK8MDDFyToVVcS1Ft_mmQlakGs207gOD4sbL2N-pkcObBDgYRxJ3XhrpdilDFCPKa2GNVeMyJC5n8vbtLgFRwb0f-Ezg1R8f8c6',
+  }
+];
+
+export const getStoreBySlug = (slug) => {
+  return MOCK_STORES.find((store) => store.slug === slug) || MOCK_STORES[0];
+};
+
+export const getStoreById = (id) => {
+  return MOCK_STORES.find((store) => store.id === id) || MOCK_STORES[0];
+};

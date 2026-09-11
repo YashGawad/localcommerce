@@ -1,0 +1,78 @@
+/**
+ * LocalCommerce Categories Mock Data
+ */
+
+export const MOCK_CATEGORIES = [
+  {
+    id: 'cat_groceries',
+    slug: 'groceries',
+    name: 'Groceries & Staples',
+    storesCount: 8,
+    icon: 'shopping_basket',
+    color: '#EFF6FF',
+    iconColor: '#2563EB',
+  },
+  {
+    id: 'cat_bakery',
+    slug: 'bakery-dairy',
+    name: 'Bakery & Dairy',
+    storesCount: 4,
+    icon: 'bakery_dining',
+    color: '#FEF3C7',
+    iconColor: '#D97706',
+  },
+  {
+    id: 'cat_produce',
+    slug: 'fresh-produce',
+    name: 'Fresh Produce',
+    storesCount: 5,
+    icon: 'nutrition',
+    color: '#ECFDF5',
+    iconColor: '#059669',
+  },
+  {
+    id: 'cat_beverages',
+    slug: 'beverages',
+    name: 'Beverages & Drinks',
+    storesCount: 6,
+    icon: 'local_cafe',
+    color: '#EFF6FF',
+    iconColor: '#3B82F6',
+  },
+  {
+    id: 'cat_personal',
+    slug: 'personal-care',
+    name: 'Personal Care',
+    storesCount: 4,
+    icon: 'health_and_safety',
+    color: '#FDF2F8',
+    iconColor: '#DB2777',
+  },
+  {
+    id: 'cat_snacks',
+    slug: 'packaged-snacks',
+    name: 'Snacks & Packaged Foods',
+    storesCount: 7,
+    icon: 'fastfood',
+    color: '#FFF7ED',
+    iconColor: '#EA580C',
+  },
+  {
+    id: 'cat_household',
+    slug: 'household-cleaning',
+    name: 'Cleaning & Household',
+    storesCount: 5,
+    icon: 'cleaning_services',
+    color: '#F1F5F9',
+    iconColor: '#475569',
+  },
+  {
+    id: 'cat_stationery',
+    slug: 'stationery',
+    name: 'Stationery & Books',
+    storesCount: 3,
+    icon: 'edit_note',
+    color: '#EEF2FF',
+    iconColor: '#4F46E5',
+  },
+];
