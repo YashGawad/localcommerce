@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { GLOBAL_PRODUCTS, getListingsForProduct } from '../../data/products';
 import { MOCK_STORES } from '../../data/stores';
 import StoreListingCard from '../../components/customer/StoreListingCard';
 import Button from '../../components/shared/Button';
 import Badge from '../../components/shared/Badge';
+import { useCart } from '../../context/CartContext';
 
 /**
  * Screen 5: Customer Product Details
@@ -27,6 +28,7 @@ export default function ProductDetailsPage() {
   // Selected pack variant
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0]?.name || product.unit);
 
+  const { addToCart } = useCart();
   // Add to cart state feedback
   const [cartState, setCartState] = useState({ added: false, count: 0 });
 
@@ -36,6 +38,7 @@ export default function ProductDetailsPage() {
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
+    addToCart(product, activeListing, activeStore, 1);
     setCartState({ added: true, count: (cartState.count || 0) + 1 });
   };
 

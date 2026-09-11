@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../shared/Logo';
+import { useCart } from '../../context/CartContext';
 
 export default function CustomerHeader() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -12,6 +13,8 @@ export default function CustomerHeader() {
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
+
+  const { itemCount, total } = useCart();
 
   return (
     <>
@@ -218,6 +221,7 @@ export default function CustomerHeader() {
                 fontWeight: 600,
                 color: '#172033',
                 borderRadius: '6px',
+                textDecoration: 'none',
               }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#64748B' }}>
@@ -227,7 +231,7 @@ export default function CustomerHeader() {
             </Link>
 
             <Link
-              to="/login"
+              to="/profile"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -237,12 +241,13 @@ export default function CustomerHeader() {
                 fontWeight: 600,
                 color: '#172033',
                 borderRadius: '6px',
+                textDecoration: 'none',
               }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#64748B' }}>
-                account_circle
+                person
               </span>
-              <span>Sign In</span>
+              <span>Account</span>
             </Link>
 
             <Link
@@ -255,16 +260,37 @@ export default function CustomerHeader() {
                 fontSize: '13px',
                 fontWeight: 600,
                 color: '#FFFFFF',
-                backgroundColor: '#172554',
+                backgroundColor: '#2563EB',
                 borderRadius: '6px',
                 boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                 textDecoration: 'none',
+                transition: 'background-color 0.15s ease',
               }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                shopping_cart
+                shopping_bag
               </span>
-              <span>Cart (3) • ₹240</span>
+              <span>Cart ({itemCount}) • ₹{total}</span>
+            </Link>
+
+            <Link
+              to="/profile"
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                backgroundColor: '#172554',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textDecoration: 'none',
+              }}
+              title="View Profile"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                person
+              </span>
             </Link>
           </div>
         </div>

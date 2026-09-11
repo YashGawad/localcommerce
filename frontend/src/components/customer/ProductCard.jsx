@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import Badge from '../shared/Badge';
 import Button from '../shared/Button';
+import { useCart } from '../../context/CartContext';
 
 /**
  * Reusable Customer Product Card
@@ -17,6 +17,7 @@ export default function ProductCard({
   onAddToCart,
 }) {
   const [qty, setQty] = useState(0);
+  const cartContext = useCart();
 
   const price = storePrice || (product ? product.mrp - 4 : 50);
   const originalPrice = mrp || (product ? product.mrp : 55);
@@ -28,21 +29,33 @@ export default function ProductCard({
     e.stopPropagation();
     if (isOutOfStock) return;
     setQty(1);
-    if (onAddToCart) onAddToCart(product, store, 1);
+    if (onAddToCart) {
+      onAddToCart(product, store, 1);
+    } else if (cartContext?.addToCart) {
+      const activeStore = store || { id: 'store_02', name: 'Shree Kirana & General Store', slug: 'shree-kirana' };
+      cartContext.addToCart(product, { storePrice: price, mrp: originalPrice, unit: product?.unit }, activeStore, 1);
+    }
   };
 
   const handleInc = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setQty((prev) => prev + 1);
-    if (onAddToCart) onAddToCart(product, store, qty + 1);
+    if (onAddToCart) {
+      onAddToCart(product, store, qty + 1);
+    } else if (cartContext?.addToCart) {
+      const activeStore = store || { id: 'store_02', name: 'Shree Kirana & General Store', slug: 'shree-kirana' };
+      cartContext.addToCart(product, { storePrice: price, mrp: originalPrice, unit: product?.unit }, activeStore, 1);
+    }
   };
 
   const handleDec = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setQty((prev) => Math.max(0, prev - 1));
-    if (onAddToCart) onAddToCart(product, store, qty - 1);
+    if (onAddToCart) {
+      onAddToCart(product, store, qty - 1);
+    }
   };
 
   const storeSlug = store?.slug || 'shree-kirana';
