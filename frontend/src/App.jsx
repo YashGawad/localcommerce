@@ -31,7 +31,7 @@ import LoginPage from './pages/auth/LoginPage';
 import SignUpPage from './pages/auth/SignUpPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 
-// Business Pages (Batch 1 & Batch 5)
+// Business Pages (Batch 1, Batch 5 & Batch 6)
 import BusinessDashboardPage from './pages/business/BusinessDashboardPage';
 import BusinessProductsPage from './pages/business/BusinessProductsPage';
 import BusinessAddProductPage from './pages/business/BusinessAddProductPage';
@@ -39,6 +39,14 @@ import BusinessEditProductPage from './pages/business/BusinessEditProductPage';
 import BusinessProductDetailsPage from './pages/business/BusinessProductDetailsPage';
 import BusinessCategoriesPage from './pages/business/BusinessCategoriesPage';
 import BusinessInventoryPage from './pages/business/BusinessInventoryPage';
+import BusinessOrdersPage from './pages/business/BusinessOrdersPage';
+import BusinessOrderDetailsPage from './pages/business/BusinessOrderDetailsPage';
+import BusinessFulfillmentPage from './pages/business/BusinessFulfillmentPage';
+import BusinessCustomersPage from './pages/business/BusinessCustomersPage';
+import BusinessCustomerDetailsPage from './pages/business/BusinessCustomerDetailsPage';
+import BusinessStaffPage from './pages/business/BusinessStaffPage';
+import BusinessDiscountsPage from './pages/business/BusinessDiscountsPage';
+import BusinessAnalyticsPage from './pages/business/BusinessAnalyticsPage';
 import BusinessPlaceholderPage from './pages/business/BusinessPlaceholderPage';
 
 // Admin Pages
@@ -93,6 +101,14 @@ export default function App() {
               <Route path="products/:id" element={<BusinessProductDetailsPage />} />
               <Route path="categories" element={<BusinessCategoriesPage />} />
               <Route path="inventory" element={<BusinessInventoryPage />} />
+              <Route path="orders" element={<BusinessOrdersPage />} />
+              <Route path="orders/:id" element={<BusinessOrderDetailsPage />} />
+              <Route path="fulfillment" element={<BusinessFulfillmentPage />} />
+              <Route path="customers" element={<BusinessCustomersPage />} />
+              <Route path="customers/:id" element={<BusinessCustomerDetailsPage />} />
+              <Route path="staff" element={<BusinessStaffPage />} />
+              <Route path="discounts" element={<BusinessDiscountsPage />} />
+              <Route path="analytics" element={<BusinessAnalyticsPage />} />
               <Route path=":section" element={<BusinessPlaceholderPage />} />
               <Route path=":section/:id" element={<BusinessPlaceholderPage />} />
             </Route>
