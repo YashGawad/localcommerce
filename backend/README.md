@@ -1,4 +1,4 @@
-# LocalCommerce Backend (Milestones 1, 2, 3, 4 & 5)
+# LocalCommerce Backend (Milestones 1, 2, 3, 4, 5 & 6)
 
 This is the backend service for the LocalCommerce platform, built using Node.js, Express, and PostgreSQL (`pg`).
 
@@ -45,9 +45,10 @@ This is the backend service for the LocalCommerce platform, built using Node.js,
    node src/scripts/seedPasswords.js
    ```
 
-5. Run Automated Test Suite:
+5. Run Automated Test Suites:
    ```bash
    node src/scripts/testMilestone5.js
+   node src/scripts/testMilestone6.js
    ```
 
 ## Starting the Server
@@ -62,7 +63,7 @@ Upon successful launch, the terminal displays:
 LocalCommerce API running on port 5000
 ```
 
-## Authorization & Multi-Tenant Access Matrix (Milestone 5)
+## Authorization & Multi-Tenant Access Matrix
 
 | Endpoint | Method | Public / Unauth | Customer | Store Staff | Delivery Staff | Store Owner / Manager | Platform Admin |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -80,6 +81,13 @@ LocalCommerce API running on port 5000
 | `/api/stores/:storeId/products/:id` | PATCH | 401 | 403 | 403 | 403 | Allowed for own store (200) | 403 (unless store member) |
 | `/api/stores` | POST | 401 | 403 | 403 | 403 | 403 (unless business_owner) | Allowed (201) |
 | `/api/stores/:id` | PATCH | 401 | 403 | 403 | 403 | Allowed for own store (200) | Allowed (200) |
+| `/api/customers/me` | GET | 401 | Allowed (200) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) |
+| `/api/customers/me` | PATCH | 401 | Allowed (200) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) |
+| `/api/customers/me/addresses` | GET | 401 | Allowed (200) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) |
+| `/api/customers/me/addresses/:id` | GET | 401 | Allowed (200, own address only) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) |
+| `/api/customers/me/addresses` | POST | 401 | Allowed (201) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) |
+| `/api/customers/me/addresses/:id` | PATCH | 401 | Allowed (200, own address only) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) |
+| `/api/customers/me/addresses/:id` | DELETE | 401 | Allowed (200, own address only) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) | 404 (no customer record) |
 
 ## API Endpoints
 
@@ -98,39 +106,41 @@ LocalCommerce API running on port 5000
   - Header: `Authorization: Bearer <JWT>`
   - Returns authenticated user details including store-specific roles.
 
-### 3. Stores API (Milestone 2 & 5)
+### 3. Customer Profile & Addresses API (Milestone 6)
+- **Get Customer Profile:** `GET /api/customers/me` [Authenticated Customer]
+- **Update Customer Profile:** `PATCH /api/customers/me` [Authenticated Customer]
+  - Allowed fields: `name`, `phone`
+  - Protected fields: `role`, `status`, `customer_id`, `user_id`, `email`, `password_hash`
+- **List Saved Addresses:** `GET /api/customers/me/addresses` [Authenticated Customer]
+- **Get Saved Address by ID:** `GET /api/customers/me/addresses/:id` [Authenticated Customer]
+- **Create Saved Address:** `POST /api/customers/me/addresses` [Authenticated Customer]
+  - Required fields: `label`, `recipient_name`, `address_line1`, `city`, `state`, `postal_code`
+  - Optional fields: `phone`, `address_line2`, `latitude`, `longitude`, `is_default`
+- **Update Saved Address:** `PATCH /api/customers/me/addresses/:id` [Authenticated Customer]
+  - Allowed fields: `label`, `recipient_name`, `phone`, `address_line1`, `address_line2`, `city`, `state`, `postal_code`, `latitude`, `longitude`, `is_default`
+- **Delete Saved Address:** `DELETE /api/customers/me/addresses/:id` [Authenticated Customer]
+
+### 4. Stores API (Milestone 2 & 5)
 - **List All Stores:** `GET /api/stores` [Public]
 - **Get Store by ID:** `GET /api/stores/:id` [Public] (UUID format required)
 - **Get Store by Slug:** `GET /api/stores/slug/:slug` [Public]
 - **Create Store:** `POST /api/stores` [business_owner / admin only]
-  - Required fields: `name`, `slug`
-  - Optional fields: `description`, `phone`, `email`, `address`, `city`, `state`, `postal_code`, `latitude`, `longitude`, `status`
 - **Update Store:** `PATCH /api/stores/:id` [Store Owner / Manager / Platform Admin]
-  - Allowed fields: `name`, `slug`, `description`, `phone`, `email`, `address`, `city`, `state`, `postal_code`, `latitude`, `longitude`, `status`
 
-### 4. Categories API (Milestone 3 & 5)
-- **List Categories:** `GET /api/categories` [Public] (Optional query: `?store_id=<uuid>`)
+### 5. Categories API (Milestone 3 & 5)
+- **List Categories:** `GET /api/categories` [Public]
 - **Get Category by ID:** `GET /api/categories/:id` [Public]
 - **Create Category:** `POST /api/categories` [Store Owner / Manager for target store_id]
-  - Required fields: `store_id`, `name`
-  - Optional fields: `description`, `image_url`, `status`
 - **Update Category:** `PATCH /api/categories/:id` [Store Owner / Manager for category's store_id]
-  - Allowed fields: `name`, `description`, `image_url`, `status`
 
-### 5. Global Products API (Milestone 3 & 5)
+### 6. Global Products API (Milestone 3 & 5)
 - **List Global Products:** `GET /api/global-products` [Public]
 - **Get Global Product by ID:** `GET /api/global-products/:id` [Public]
 - **Create Global Product:** `POST /api/global-products` [Platform Admin only]
-  - Required field: `name`
-  - Optional fields: `brand`, `description`, `barcode`, `unit`, `mrp`, `image_url`, `status`
 - **Update Global Product:** `PATCH /api/global-products/:id` [Platform Admin only]
-  - Allowed fields: `name`, `brand`, `description`, `barcode`, `unit`, `mrp`, `image_url`, `status`
 
-### 6. Store Products / Store Listings API (Milestone 3 & 5)
+### 7. Store Products / Store Listings API (Milestone 3 & 5)
 - **List Products for Store:** `GET /api/stores/:storeId/products` [Public]
 - **Get Product for Store:** `GET /api/stores/:storeId/products/:id` [Public]
 - **Create Store Product:** `POST /api/stores/:storeId/products` [Store Owner / Manager for storeId]
-  - Required: `price` (and `name` if custom product without `global_product_id`)
-  - Optional: `global_product_id`, `category_id`, `name`, `description`, `sku`, `cost_price`, `stock` / `stock_quantity`, `threshold` / `low_stock_threshold`, `unit`, `image_url`, `status`
 - **Update Store Product:** `PATCH /api/stores/:storeId/products/:id` [Store Owner / Manager for storeId]
-  - Allowed fields: `global_product_id`, `category_id`, `name`, `description`, `sku`, `price`, `cost_price`, `stock` / `stock_quantity`, `threshold` / `low_stock_threshold`, `unit`, `image_url`, `status`
