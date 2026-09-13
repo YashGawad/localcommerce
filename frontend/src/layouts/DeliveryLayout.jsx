@@ -3,67 +3,39 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import Logo from '../components/shared/Logo';
 import { useAuth } from '../context/AuthContext';
 import { useDeliveryStaff } from '../hooks/useDeliveryStaff';
+import { CatalogProvider } from '../context/CatalogContext';
+import { OperationsProvider } from '../context/OperationsContext';
+import styles from './DeliveryLayout.module.css';
 
-export default function DeliveryLayout() {
+function DeliveryLayoutInner() {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const { currentStaff, staffStore } = useDeliveryStaff();
   const [onDuty, setOnDuty] = useState(true);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#F8F9FF' }}>
+    <div className={styles.container}>
       {/* Delivery Header */}
-      <header
-        style={{
-          height: '60px',
-          backgroundColor: '#172554',
-          color: '#FFFFFF',
-          padding: '0 20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 40,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <header className={styles.header}>
+        <div className={styles.leftGroup}>
           <Logo variant="delivery" to="/delivery" />
           {staffStore && (
-            <span
-              style={{
-                fontSize: '12px',
-                color: '#93C5FD',
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                padding: '3px 10px',
-                borderRadius: '12px',
-                fontWeight: 500,
-              }}
-              className="hidden sm:inline-block"
-            >
+            <span className={styles.storeBadge}>
               {staffStore.name}
             </span>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px' }}>
+        <div className={styles.rightGroup}>
           {/* On Duty Toggle */}
           <button
             type="button"
             onClick={() => setOnDuty(!onDuty)}
+            className={styles.dutyBtn}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '4px 10px',
-              borderRadius: '16px',
               backgroundColor: onDuty ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
               border: `1px solid ${onDuty ? '#10B981' : '#EF4444'}`,
               color: onDuty ? '#A7F3D0' : '#FCA5A5',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
             }}
             title="Toggle Duty Status"
           >
@@ -78,37 +50,18 @@ export default function DeliveryLayout() {
             <span>{onDuty ? 'On Duty' : 'Off Duty'}</span>
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span
-              style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                backgroundColor: '#2563EB',
-                color: '#FFFFFF',
-                fontSize: '11px',
-                fontWeight: 700,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+          <div className={styles.staffContainer}>
+            <span className={styles.staffAvatar}>
               {currentStaff?.avatar || 'VR'}
             </span>
-            <span style={{ color: '#E2E8F0', fontWeight: 600 }}>
+            <span className={styles.staffName}>
               {currentStaff?.name || 'Vikram Rao'}
             </span>
-            {currentStaff?.code && (
-              <span style={{ color: '#94A3B8', fontSize: '11px' }}>
-                ({currentStaff.code})
-              </span>
-            )}
           </div>
 
           <Link
             to="/"
-            style={{ color: '#93C5FD', textDecoration: 'none', fontWeight: 500 }}
-            className="hidden md:inline"
+            className={styles.storefrontLink}
           >
             Storefront
           </Link>
@@ -119,19 +72,7 @@ export default function DeliveryLayout() {
               logout();
               navigate('/login');
             }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: '#FCA5A5',
-              backgroundColor: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: 600,
-              padding: '4px 8px',
-              borderRadius: '4px',
-            }}
+            className={styles.exitBtn}
             title="Log Out"
           >
             <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
@@ -169,5 +110,15 @@ export default function DeliveryLayout() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function DeliveryLayout() {
+  return (
+    <CatalogProvider>
+      <OperationsProvider>
+        <DeliveryLayoutInner />
+      </OperationsProvider>
+    </CatalogProvider>
   );
 }

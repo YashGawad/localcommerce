@@ -5,6 +5,7 @@ import { MOCK_STORES } from '../../data/stores';
 import { useAuth } from '../../context/AuthContext';
 import { useCatalog } from '../../context/CatalogContext';
 import { useNotifications } from '../../context/NotificationsContext';
+import styles from './BusinessHeader.module.css';
 
 export default function BusinessHeader({ onOpenNav }) {
   const { currentStore: selectedStore, setCurrentStore: setSelectedStore, isOnline, setIsOnline } = useCatalog();
@@ -16,42 +17,14 @@ export default function BusinessHeader({ onOpenNav }) {
   const { unreadCount } = useNotifications();
 
   return (
-    <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 40,
-        backgroundColor: '#FFFFFF',
-        borderBottom: '1px solid #E2E8F0',
-        height: '64px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-      }}
-    >
-      <div
-        style={{
-          height: '100%',
-          padding: '0 16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '16px',
-        }}
-      >
+    <header className={styles.header}>
+      <div className={styles.headerInner}>
         {/* Left: Hamburger + Logo + Store Switcher */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className={styles.leftGroup}>
           {/* Hamburger button for COMPLETE business navigation */}
           <button
             onClick={onOpenNav}
-            style={{
-              padding: '6px',
-              borderRadius: '6px',
-              color: '#172033',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#F8FAFC',
-              border: '1px solid #E2E8F0',
-            }}
+            className={styles.hamburgerBtn}
             title="Open Application Navigation"
             aria-label="Open Navigation Drawer"
           >
@@ -70,23 +43,14 @@ export default function BusinessHeader({ onOpenNav }) {
                 setIsStatusMenuOpen(false);
                 setIsProfileMenuOpen(false);
               }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 8px',
-                borderRadius: '6px',
-                backgroundColor: '#F8FAFC',
-                border: '1px solid #E2E8F0',
-                textAlign: 'left',
-              }}
+              className={styles.storeSwitcherBtn}
               title="Switch active store"
             >
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#172554', lineHeight: 1.1 }}>
+                <span className={styles.storeNameText}>
                   {selectedStore.name}
                 </span>
-                <span style={{ fontSize: '10px', color: '#64748B', lineHeight: 1 }}>
+                <span className={styles.storeLocationText}>
                   {selectedStore.location}
                 </span>
               </div>
@@ -149,15 +113,7 @@ export default function BusinessHeader({ onOpenNav }) {
         </div>
 
         {/* Center: Global Search */}
-        <div
-          style={{
-            flex: 1,
-            maxWidth: '480px',
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
+        <div className={styles.searchContainer}>
           <span
             className="material-symbols-outlined"
             style={{
@@ -173,16 +129,7 @@ export default function BusinessHeader({ onOpenNav }) {
           <input
             type="text"
             placeholder="Search orders, products, customers..."
-            style={{
-              width: '100%',
-              height: '34px',
-              padding: '0 40px 0 34px',
-              backgroundColor: '#F8FAFC',
-              border: '1px solid #E2E8F0',
-              borderRadius: '6px',
-              fontSize: '12px',
-              color: '#172033',
-            }}
+            className={styles.searchInput}
           />
           <span
             style={{
@@ -202,7 +149,7 @@ export default function BusinessHeader({ onOpenNav }) {
         </div>
 
         {/* Right: Store Status + Notifications + Owner Profile */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className={styles.rightGroup}>
           {/* Online/Offline Status Toggle */}
           <div style={{ position: 'relative' }}>
             <button
@@ -211,17 +158,11 @@ export default function BusinessHeader({ onOpenNav }) {
                 setIsStoreSwitcherOpen(false);
                 setIsProfileMenuOpen(false);
               }}
+              className={styles.statusToggleBtn}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 10px',
-                borderRadius: '20px',
                 backgroundColor: isOnline ? '#ECFDF5' : '#FEF2F2',
                 border: `1px solid ${isOnline ? '#A7F3D0' : '#FECACA'}`,
                 color: isOnline ? '#065F46' : '#991B1B',
-                fontSize: '12px',
-                fontWeight: 600,
               }}
             >
               <span
@@ -232,7 +173,8 @@ export default function BusinessHeader({ onOpenNav }) {
                   backgroundColor: isOnline ? '#10B981' : '#EF4444',
                 }}
               />
-              <span>{isOnline ? 'Store Online' : 'Store Offline'}</span>
+              <span className={styles.statusLabelFull}>{isOnline ? 'Store Online' : 'Store Offline'}</span>
+              <span className={styles.statusLabelShort}>{isOnline ? 'Online' : 'Offline'}</span>
               <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
                 expand_more
               </span>

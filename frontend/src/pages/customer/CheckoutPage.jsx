@@ -238,7 +238,7 @@ export default function CheckoutPage() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
           gap: '32px',
           alignItems: 'start',
         }}
@@ -298,7 +298,7 @@ export default function CheckoutPage() {
             </div>
 
             {/* Mode Radios */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '16px' }}>
               {/* Option A: Store Delivery */}
               <div
                 onClick={() => setFulfillmentMode('delivery')}

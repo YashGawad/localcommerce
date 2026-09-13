@@ -6,6 +6,7 @@ import { GLOBAL_PRODUCTS, STORE_LISTINGS } from '../../data/products';
 import ProductCard from '../../components/customer/ProductCard';
 import StoreCard from '../../components/customer/StoreCard';
 import CategoryCard from '../../components/customer/CategoryCard';
+import styles from './HomePage.module.css';
 
 /**
  * Screen 1: Customer Home / Discovery
@@ -34,25 +35,10 @@ export default function HomePage() {
   });
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 16px 48px', display: 'flex', flexDirection: 'column', gap: '40px' }}>
+    <div className={styles.container}>
       {/* 1. Hero / Discovery Value Section */}
-      <section
-        style={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E2E8F0',
-          borderRadius: '12px',
-          padding: '36px 32px',
-          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
-        }}
-      >
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '32px',
-            alignItems: 'center',
-          }}
-        >
+      <section className={styles.heroSection}>
+        <div className={styles.heroGrid}>
           {/* Left Hero Message */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div
@@ -211,7 +197,7 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))', gap: '12px' }}>
+        <div className={styles.categoryGrid}>
           {MOCK_CATEGORIES.map((cat) => (
             <CategoryCard key={cat.id} category={cat} />
           ))}
@@ -231,7 +217,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+        <div className={styles.storeGrid}>
           {MOCK_STORES.map((store) => (
             <StoreCard key={store.id} store={store} />
           ))}
@@ -251,7 +237,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+        <div className={styles.productGrid}>
           {popularProductListings.map((item) => (
             <ProductCard
               key={item.product.id}
@@ -284,7 +270,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
+        <div className={styles.valuePropsGrid}>
           <div style={{ display: 'flex', gap: '14px' }}>
             <div
               style={{

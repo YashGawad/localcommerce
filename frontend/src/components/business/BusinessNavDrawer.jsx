@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import Logo from '../shared/Logo';
+import styles from './BusinessNavDrawer.module.css';
 
 export default function BusinessNavDrawer({ isOpen, onClose }) {
   if (!isOpen) return null;
@@ -70,46 +71,17 @@ export default function BusinessNavDrawer({ isOpen, onClose }) {
       />
 
       {/* Drawer */}
-      <aside
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: '280px',
-          backgroundColor: '#FFFFFF',
-          zIndex: 60,
-          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.15)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflowY: 'auto',
-        }}
-      >
+      <aside className={styles.drawer}>
         {/* Drawer Header */}
-        <div
-          style={{
-            height: '64px',
-            padding: '0 16px',
-            borderBottom: '1px solid #E2E8F0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+        <div className={styles.header}>
           <Logo variant="business" to="/business" />
           <button
             onClick={onClose}
-            style={{
-              padding: '6px',
-              borderRadius: '4px',
-              color: '#64748B',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className={styles.closeBtn}
             title="Close menu"
+            aria-label="Close navigation drawer"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>
               close
             </span>
           </button>
@@ -175,16 +147,7 @@ export default function BusinessNavDrawer({ isOpen, onClose }) {
         </div>
 
         {/* Drawer Footer Owner Profile */}
-        <div
-          style={{
-            padding: '12px 16px',
-            borderTop: '1px solid #E2E8F0',
-            backgroundColor: '#F8FAFC',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-          }}
-        >
+        <div className={styles.footerProfile}>
           <div
             style={{
               width: '32px',

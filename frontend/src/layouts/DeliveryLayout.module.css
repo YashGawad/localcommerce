@@ -1,0 +1,129 @@
+/* DeliveryLayout.module.css */
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #F8F9FF;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.header {
+  height: 60px;
+  background-color: var(--color-primary-navy, #172554);
+  color: #FFFFFF;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.leftGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.storeBadge {
+  font-size: 12px;
+  color: #93C5FD;
+  background-color: rgba(255, 255, 255, 0.08);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.rightGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.dutyBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  min-height: 40px;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.staffContainer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.staffAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--color-primary-blue, #2563EB);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.staffName {
+  color: #E2E8F0;
+  font-weight: 600;
+}
+
+.storefrontLink {
+  color: #93C5FD;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 6px 8px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.exitBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #FCA5A5;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 8px;
+  min-height: 40px;
+  border-radius: 4px;
+}
+
+@media (max-width: 640px) {
+  .storeBadge {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 0 10px;
+  }
+
+  .staffName {
+    display: none;
+  }
+
+  .storefrontLink {
+    display: none;
+  }
+}

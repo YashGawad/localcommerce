@@ -696,8 +696,8 @@ const INITIAL_STORE_ORDERS = {
 
   store_02: [
     {
-      id: 'LC-10482',
-      orderNumber: '#LC-10482',
+      id: 'LC-10486',
+      orderNumber: '#LC-10486',
       storeId: 'store_02',
       storeName: 'Shree Kirana & General Store',
       status: 'OUT_FOR_DELIVERY',

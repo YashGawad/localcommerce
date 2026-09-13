@@ -51,8 +51,19 @@ import BusinessNotificationsPage from './pages/business/BusinessNotificationsPag
 import BusinessSettingsPage from './pages/business/BusinessSettingsPage';
 import BusinessPlaceholderPage from './pages/business/BusinessPlaceholderPage';
 
-// Admin Pages
+// Admin Pages (Batch 10 - Platform Operations Console)
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminStoresPage from './pages/admin/AdminStoresPage';
+import AdminStoreDetailsPage from './pages/admin/AdminStoreDetailsPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminGlobalProductsPage from './pages/admin/AdminGlobalProductsPage';
+import AdminStoreListingsPage from './pages/admin/AdminStoreListingsPage';
+import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+import AdminReviewsPage from './pages/admin/AdminReviewsPage';
+import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage';
+import AdminSubscriptionsPage from './pages/admin/AdminSubscriptionsPage';
+import AdminNotificationsPage from './pages/admin/AdminNotificationsPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import AdminPlaceholderPage from './pages/admin/AdminPlaceholderPage';
 
 // Delivery Pages
@@ -122,6 +133,17 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboardPage />} />
+              <Route path="stores" element={<AdminStoresPage />} />
+              <Route path="stores/:id" element={<AdminStoreDetailsPage />} />
+              <Route path="users" element={<AdminUsersPage />} />
+              <Route path="global-products" element={<AdminGlobalProductsPage />} />
+              <Route path="store-listings" element={<AdminStoreListingsPage />} />
+              <Route path="orders" element={<AdminOrdersPage />} />
+              <Route path="reviews" element={<AdminReviewsPage />} />
+              <Route path="analytics" element={<AdminAnalyticsPage />} />
+              <Route path="subscriptions" element={<AdminSubscriptionsPage />} />
+              <Route path="notifications" element={<AdminNotificationsPage />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
               <Route path=":section" element={<AdminPlaceholderPage />} />
               <Route path=":section/:id" element={<AdminPlaceholderPage />} />
             </Route>

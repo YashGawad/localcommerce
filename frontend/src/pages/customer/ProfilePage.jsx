@@ -139,13 +139,13 @@ export default function ProfilePage() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
           gap: '32px',
           alignItems: 'start',
         }}
       >
         {/* Left Sidebar: Profile Overview & Navigation */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, minWidth: '280px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, minWidth: 0 }}>
           {/* Profile Card */}
           <div
             style={{

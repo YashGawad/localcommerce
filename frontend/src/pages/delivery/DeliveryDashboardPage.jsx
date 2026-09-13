@@ -1380,9 +1380,10 @@ export default function DeliveryDashboardPage() {
                     onChange={(e) => setOtpCode(e.target.value)}
                     placeholder="Enter 4-digit code (e.g. 4021)"
                     style={{
-                      padding: '10px 14px',
-                      fontSize: '14px',
-                      letterSpacing: '0.2em',
+                      height: '46px',
+                      padding: '0 14px',
+                      fontSize: '16px',
+                      letterSpacing: '0.25em',
                       fontWeight: 700,
                       backgroundColor: '#EFF4FF',
                       border: '1px solid #CBD5E1',
@@ -1413,7 +1414,8 @@ export default function DeliveryDashboardPage() {
                 type="button"
                 onClick={() => setSelectedOrderForUpdate(null)}
                 style={{
-                  padding: '8px 16px',
+                  padding: '10px 18px',
+                  minHeight: '44px',
                   backgroundColor: '#FFFFFF',
                   color: '#0B1C30',
                   border: '1px solid #CBD5E1',
@@ -1421,6 +1423,9 @@ export default function DeliveryDashboardPage() {
                   fontSize: '13px',
                   fontWeight: 600,
                   cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
                 Cancel
@@ -1429,7 +1434,8 @@ export default function DeliveryDashboardPage() {
                 type="button"
                 onClick={handleConfirmStatusUpdate}
                 style={{
-                  padding: '8px 18px',
+                  padding: '10px 20px',
+                  minHeight: '44px',
                   backgroundColor: '#0051D5',
                   color: '#FFFFFF',
                   border: 'none',
@@ -1438,6 +1444,9 @@ export default function DeliveryDashboardPage() {
                   fontWeight: 700,
                   cursor: 'pointer',
                   boxShadow: '0 2px 4px rgba(0, 81, 213, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
                 Confirm Update

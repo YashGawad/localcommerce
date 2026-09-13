@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../shared/Button';
 import { useCart } from '../../context/CartContext';
+import styles from './ProductCard.module.css';
 
 /**
  * Reusable Customer Product Card
@@ -62,47 +63,15 @@ export default function ProductCard({
   const detailUrl = `/store/${storeSlug}/product/${product.id}`;
 
   return (
-    <div
-      style={{
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E2E8F0',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
-        position: 'relative',
-      }}
-      className="product-card"
-    >
+    <div className={styles.card}>
       {/* Product Image Area */}
-      <Link to={detailUrl} style={{ textDecoration: 'none', color: 'inherit' }}>
-        <div
-          style={{
-            position: 'relative',
-            width: '100%',
-            height: '180px',
-            backgroundColor: '#F8FAFC',
-            borderBottom: '1px solid #F1F5F9',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '12px',
-            overflow: 'hidden',
-          }}
-        >
+      <Link to={detailUrl} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column', flex: 1 }}>
+        <div className={styles.imageArea}>
           {product.image ? (
             <img
               src={product.image}
               alt={product.title}
-              style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                objectFit: 'contain',
-                transition: 'transform 0.2s ease',
-              }}
+              className={styles.productImage}
               loading="lazy"
             />
           ) : (
@@ -113,110 +82,47 @@ export default function ProductCard({
 
           {/* Discount Chip */}
           {discount > 0 && (
-            <span
-              style={{
-                position: 'absolute',
-                top: '8px',
-                left: '8px',
-                backgroundColor: '#10B981',
-                color: '#FFFFFF',
-                fontSize: '10px',
-                fontWeight: 700,
-                padding: '2px 6px',
-                borderRadius: '3px',
-                letterSpacing: '0.02em',
-              }}
-            >
+            <span className={styles.saveBadge}>
               SAVE ₹{discount}
             </span>
           )}
 
           {/* Availability Chip if low or out of stock */}
           {isOutOfStock ? (
-            <span
-              style={{
-                position: 'absolute',
-                top: '8px',
-                right: '8px',
-                backgroundColor: 'rgba(239, 68, 68, 0.9)',
-                color: '#FFFFFF',
-                fontSize: '10px',
-                fontWeight: 700,
-                padding: '2px 6px',
-                borderRadius: '3px',
-              }}
-            >
+            <span className={styles.outOfStockBadge}>
               Out of Stock
             </span>
           ) : availability === 'Low Stock' ? (
-            <span
-              style={{
-                position: 'absolute',
-                top: '8px',
-                right: '8px',
-                backgroundColor: '#FEF3C7',
-                color: '#92400E',
-                fontSize: '10px',
-                fontWeight: 700,
-                padding: '2px 6px',
-                borderRadius: '3px',
-                border: '1px solid #FDE68A',
-              }}
-            >
+            <span className={styles.lowStockBadge}>
               Low Stock
             </span>
           ) : null}
         </div>
 
         {/* Content Body */}
-        <div style={{ padding: '14px 14px 10px' }}>
+        <div className={styles.contentBody}>
           {/* Brand & Variant */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+          <div className={styles.brandRow}>
+            <span className={styles.brandText}>
               {product.brand}
             </span>
-            <span style={{ fontSize: '11px', color: '#64748B' }}>
+            <span className={styles.unitText}>
               {product.unit}
             </span>
           </div>
 
           {/* Product Title */}
-          <h3
-            style={{
-              fontSize: '14px',
-              fontWeight: 600,
-              color: '#172033',
-              lineHeight: 1.35,
-              minHeight: '38px',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
+          <h3 className={styles.title}>
             {product.title}
           </h3>
 
           {/* Fulfilling Store Tag */}
           {store && (
-            <div
-              style={{
-                marginTop: '8px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '11px',
-                color: '#172554',
-                backgroundColor: '#EFF4FF',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                fontWeight: 500,
-              }}
-            >
+            <div className={styles.storeTag}>
               <span className="material-symbols-outlined" style={{ fontSize: '13px', color: '#2563EB' }}>
                 storefront
               </span>
-              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>
+              <span className={styles.storeName}>
                 {store.name}
               </span>
             </div>
@@ -225,28 +131,19 @@ export default function ProductCard({
       </Link>
 
       {/* Pricing & Add to Cart Footer */}
-      <div
-        style={{
-          padding: '10px 14px 14px',
-          borderTop: '1px solid #F1F5F9',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '8px',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-            <span style={{ fontSize: '16px', fontWeight: 700, color: '#172033', letterSpacing: '-0.01em' }}>
+      <div className={styles.footer}>
+        <div className={styles.priceGroup}>
+          <div className={styles.priceRow}>
+            <span className={styles.currentPrice}>
               ₹{price}
             </span>
             {originalPrice > price && (
-              <span style={{ fontSize: '12px', color: '#94A3B8', textDecoration: 'line-through' }}>
+              <span className={styles.originalPrice}>
                 ₹{originalPrice}
               </span>
             )}
           </div>
-          <span style={{ fontSize: '10px', color: '#64748B' }}>Store-direct rate</span>
+          <span className={styles.rateLabel}>Store-direct rate</span>
         </div>
 
         {/* Add Button / Counter */}
@@ -259,43 +156,20 @@ export default function ProductCard({
             Add
           </Button>
         ) : (
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              backgroundColor: '#172554',
-              borderRadius: '4px',
-              padding: '2px',
-              color: '#FFFFFF',
-            }}
-          >
+          <div className={styles.stepper}>
             <button
               onClick={handleDec}
-              style={{
-                width: '24px',
-                height: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
-              }}
+              className={styles.stepperBtn}
               aria-label="Decrease quantity"
             >
               <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>remove</span>
             </button>
-            <span style={{ minWidth: '20px', textAlign: 'center', fontSize: '12px', fontWeight: 700 }}>
+            <span className={styles.stepperCount}>
               {qty}
             </span>
             <button
               onClick={handleInc}
-              style={{
-                width: '24px',
-                height: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
-              }}
+              className={styles.stepperBtn}
               aria-label="Increase quantity"
             >
               <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>add</span>
