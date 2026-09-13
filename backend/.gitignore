@@ -1,3 +1,66 @@
+# Dependencies
 node_modules/
+jspm_packages/
+
+# Environment Variables & Secrets
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+
+# Logs
+logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime data & Process Managers (PM2, etc.)
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Test Coverage & Tooling Cache
+coverage/
+.nyc_output/
+.cache/
+.eslintcache/
+.eslintcache
+
+# Build & Distribution outputs
+dist/
+build/
+
+# Temporary & Swap Files
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Database Backups & Local Data
+*.dump
+*.sql.bak
+*.sqlite
+*.sqlite3
+
+# IDEs & Code Editors
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.sln
+
+# OS-generated files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
