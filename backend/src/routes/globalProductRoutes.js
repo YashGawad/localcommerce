@@ -6,11 +6,15 @@ const {
   createGlobalProduct,
   updateGlobalProduct,
 } = require('../controllers/globalProductController');
+const { getGlobalProductReviews } = require('../controllers/reviewController');
 const { authenticate } = require('../middleware/authMiddleware');
 const { requireRole } = require('../middleware/roleMiddleware');
 
 // GET /api/global-products - List all global products [Public]
 router.get('/', getAllGlobalProducts);
+
+// GET /api/global-products/:globalProductId/reviews - Get reviews and aggregate ratings for a global product [Public]
+router.get('/:globalProductId/reviews', getGlobalProductReviews);
 
 // GET /api/global-products/:id - Get global product by UUID [Public]
 router.get('/:id', getGlobalProductById);

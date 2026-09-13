@@ -11,6 +11,7 @@ const {
   updateCustomerAddress,
   deleteCustomerAddress,
 } = require('../controllers/addressController');
+const { getCustomerReviews } = require('../controllers/reviewController');
 const { authenticate } = require('../middleware/authMiddleware');
 
 // Customer Profile Routes
@@ -19,6 +20,9 @@ router.get('/me', authenticate, getCustomerProfile);
 
 // PATCH /api/customers/me - Update authenticated customer profile
 router.patch('/me', authenticate, updateCustomerProfile);
+
+// GET /api/customers/me/reviews - List review history for authenticated customer
+router.get('/me/reviews', authenticate, getCustomerReviews);
 
 // Customer Address Routes
 // GET /api/customers/me/addresses - List all addresses for authenticated customer

@@ -115,6 +115,74 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+/**
+ * Optional Authentication Middleware
+ * If a valid Bearer token is present, populates req.user.
+ * If absent or invalid, proceeds with req.user = null without throwing 401.
+ */
+const optionalAuthenticate = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    req.user = null;
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      req.user = null;
+      return next();
+    }
+
+    const decoded = jwt.verify(token, jwtSecret);
+    if (!decoded || !decoded.userId) {
+      req.user = null;
+      return next();
+    }
+
+    const userResult = await pool.query(
+      `SELECT id, name, email, role, phone, status, created_at, updated_at
+       FROM users
+       WHERE id = $1;`,
+      [decoded.userId]
+    );
+
+    if (userResult.rows.length === 0 || userResult.rows[0].status !== 'active') {
+      req.user = null;
+      return next();
+    }
+
+    const user = userResult.rows[0];
+    const storeRolesResult = await pool.query(
+      `SELECT store_id, role FROM store_users WHERE user_id = $1;`,
+      [user.id]
+    );
+
+    req.user = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone,
+      status: user.status,
+      store_roles: storeRolesResult.rows,
+    };
+
+    return next();
+  } catch {
+    req.user = null;
+    return next();
+  }
+};
+
 module.exports = {
   authenticate,
+  optionalAuthenticate,
 };
+

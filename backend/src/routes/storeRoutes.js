@@ -7,6 +7,7 @@ const {
   createStore,
   updateStore,
 } = require('../controllers/storeController');
+const { getStoreReviews } = require('../controllers/reviewController');
 const storeProductRoutes = require('./storeProductRoutes');
 const { authenticate } = require('../middleware/authMiddleware');
 const { requireRole } = require('../middleware/roleMiddleware');
@@ -20,6 +21,9 @@ router.get('/', getAllStores);
 
 // GET /api/stores/slug/:slug - Get store by unique slug [Public]
 router.get('/slug/:slug', getStoreBySlug);
+
+// GET /api/stores/:storeId/reviews - Get reviews and aggregate ratings for a store [Public]
+router.get('/:storeId/reviews', getStoreReviews);
 
 // GET /api/stores/:id - Get store by UUID [Public]
 router.get('/:id', getStoreById);
