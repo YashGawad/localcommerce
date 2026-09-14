@@ -1,14 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useAdmin } from '../../context/AdminContext';
-import { useOperations } from '../../context/OperationsContext';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import AdminTable from '../../components/admin/AdminTable';
 import AdminStatusBadge from '../../components/admin/AdminStatusBadge';
 import AdminModal from '../../components/admin/AdminModal';
 
 export default function AdminOrdersPage() {
-  const { stores } = useAdmin();
-  const { ordersMap } = useOperations();
+  const { stores, orders } = useAdmin();
 
   // Filters
   const [selectedStatusTab, setSelectedStatusTab] = useState('ALL');
@@ -16,12 +14,10 @@ export default function AdminOrdersPage() {
   const [selectedFulfillment, setSelectedFulfillment] = useState('ALL');
   const [inspectOrder, setInspectOrder] = useState(null);
 
-  // Aggregate all orders across all stores from OperationsContext
+  // Platform-wide orders from PostgreSQL
   const allOrders = useMemo(() => {
-    return Object.values(ordersMap || {})
-      .flat()
-      .sort((a, b) => (b.id > a.id ? 1 : -1));
-  }, [ordersMap]);
+    return (orders || []).slice().sort((a, b) => (b.id > a.id ? 1 : -1));
+  }, [orders]);
 
   // Tab counts
   const tabCounts = useMemo(() => {

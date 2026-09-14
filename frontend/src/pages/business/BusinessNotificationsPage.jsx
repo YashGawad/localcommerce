@@ -505,8 +505,49 @@ export default function BusinessNotificationsPage() {
 
       {/* 4. Notifications List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {filteredNotifications.length === 0 ? (
-          /* Empty State */
+        {notifications.length === 0 ? (
+          /* Empty State - No notifications yet */
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              padding: '48px 24px',
+              borderRadius: '10px',
+              border: '1px solid #E2E8F0',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+            }}
+          >
+            <div
+              style={{
+                width: '52px',
+                height: '52px',
+                borderRadius: '50%',
+                backgroundColor: '#EFF6FF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#2563EB',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '30px' }}>
+                notifications_none
+              </span>
+            </div>
+            <div style={{ maxWidth: '380px' }}>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: 700, color: '#172554' }}>
+                You're all caught up
+              </h3>
+              <p style={{ margin: 0, fontSize: '13px', color: '#64748B', lineHeight: 1.5 }}>
+                No notifications yet for {currentStore?.name}. New order alerts, inventory notices, and dispatch updates will appear here.
+              </p>
+            </div>
+          </div>
+        ) : filteredNotifications.length === 0 ? (
+          /* Empty State - Filter mismatch */
           <div
             style={{
               backgroundColor: '#FFFFFF',

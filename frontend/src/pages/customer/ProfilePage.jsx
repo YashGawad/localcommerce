@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_CUSTOMER, MOCK_ADDRESSES } from '../../data/customers';
 import AddressCard from '../../components/customer/AddressCard';
 import addressService from '../../services/addressService';
+import { orderService } from '../../services/orderService';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isUUID = (id) => typeof id === 'string' && UUID_REGEX.test(id);
@@ -17,15 +17,15 @@ export default function ProfilePage() {
   const { currentUser, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [customer] = useState(MOCK_CUSTOMER);
-  const [addresses, setAddresses] = useState(MOCK_ADDRESSES);
+  const [addresses, setAddresses] = useState([]);
+  const [ordersCount, setOrdersCount] = useState(0);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState(null);
 
-  const displayName = currentUser?.name || customer.name;
-  const displayEmail = currentUser?.email || customer.email;
-  const displayPhone = currentUser?.phone || customer.phone;
-  const displayAvatar = currentUser?.avatar || (displayName ? displayName.split(' ').map((n) => n[0]).join('').slice(0, 2) : 'AT');
+  const displayName = currentUser?.name || 'Customer';
+  const displayEmail = currentUser?.email || '';
+  const displayPhone = currentUser?.phone || '';
+  const displayAvatar = currentUser?.avatar || (displayName ? displayName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'CU');
 
   // Address form fields
   const [formType, setFormType] = useState('Home');
@@ -41,7 +41,7 @@ export default function ProfilePage() {
     if (!isAuthenticated) return;
     try {
       const data = await addressService.getAddresses();
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setAddresses(data);
       }
     } catch (err) {
@@ -51,18 +51,22 @@ export default function ProfilePage() {
 
   useEffect(() => {
     let isMounted = true;
-    async function load() {
+    async function loadData() {
       if (!isAuthenticated) return;
       try {
-        const data = await addressService.getAddresses();
-        if (isMounted && Array.isArray(data) && data.length > 0) {
-          setAddresses(data);
+        const [addrData, ordersData] = await Promise.all([
+          addressService.getAddresses().catch(() => []),
+          orderService.getOrders().catch(() => []),
+        ]);
+        if (isMounted) {
+          if (Array.isArray(addrData)) setAddresses(addrData);
+          if (Array.isArray(ordersData)) setOrdersCount(ordersData.length);
         }
       } catch (err) {
-        console.warn('Could not load addresses from server:', err);
+        console.warn('Could not load profile data from server:', err);
       }
     }
-    load();
+    loadData();
     return () => {
       isMounted = false;
     };
@@ -288,7 +292,7 @@ export default function ProfilePage() {
             >
               <div style={{ backgroundColor: '#F8FAFC', padding: '10px', borderRadius: '8px' }}>
                 <span style={{ fontSize: '18px', fontWeight: 800, color: '#172554', display: 'block' }}>
-                  {customer.ordersCount}
+                  {ordersCount}
                 </span>
                 <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>
                   Total Orders
@@ -296,7 +300,7 @@ export default function ProfilePage() {
               </div>
               <div style={{ backgroundColor: '#F8FAFC', padding: '10px', borderRadius: '8px' }}>
                 <span style={{ fontSize: '18px', fontWeight: 800, color: '#2563EB', display: 'block' }}>
-                  {customer.loyaltyPoints}
+                  {ordersCount * 50}
                 </span>
                 <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>
                   Local Coins
@@ -831,16 +835,54 @@ export default function ProfilePage() {
 
           {/* Saved Addresses List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {addresses.map((address) => (
-              <AddressCard
-                key={address.id}
-                address={address}
-                isSelected={address.isDefault}
-                onEdit={handleOpenEditForm}
-                onDelete={handleDeleteAddress}
-                onSetDefault={handleSetDefault}
-              />
-            ))}
+            {addresses.length === 0 ? (
+              <div
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '12px',
+                  border: '1px dashed #CBD5E1',
+                  padding: '40px 24px',
+                  textAlign: 'center',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#94A3B8', marginBottom: '12px' }}>
+                  home_pin
+                </span>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#1E293B', margin: '0 0 6px 0' }}>
+                  No saved addresses yet
+                </h3>
+                <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 16px 0' }}>
+                  Add a delivery address to make ordering from your neighborhood kiranas fast and easy.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleOpenAddForm}
+                  style={{
+                    padding: '8px 18px',
+                    backgroundColor: '#2563EB',
+                    color: '#FFFFFF',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Add Your First Address
+                </button>
+              </div>
+            ) : (
+              addresses.map((address) => (
+                <AddressCard
+                  key={address.id}
+                  address={address}
+                  isSelected={address.isDefault || address.is_default}
+                  onEdit={handleOpenEditForm}
+                  onDelete={handleDeleteAddress}
+                  onSetDefault={handleSetDefault}
+                />
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -1,64 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Badge from '../../components/shared/Badge';
 import Button from '../../components/shared/Button';
 import { useCatalog } from '../../context/CatalogContext';
+import { useOperations } from '../../context/OperationsContext';
 
 export default function BusinessDashboardPage() {
   const { currentStore, storeProducts } = useCatalog();
+  const { storeOrders, storeCustomers } = useOperations();
   const [timeFilter, setTimeFilter] = useState('7d');
 
   // Filter low stock and out of stock products dynamically from store catalog
-  const lowStockItems = storeProducts.filter(
-    (p) => p.stock <= p.lowStockThreshold
-  );
+  const lowStockItems = useMemo(() => {
+    return (storeProducts || []).filter(
+      (p) => Number(p.stock) <= (Number(p.lowStockThreshold) || 5)
+    );
+  }, [storeProducts]);
 
-  // Mock recent orders matching Stitch design
-  const recentOrders = [
-    {
-      id: '#ORD-1084',
-      customer: 'Rahul Verma',
-      items: '3 items (Milk, Bread, Eggs)',
-      total: '₹285.00',
-      status: 'Pending',
-      statusVariant: 'warning',
-      time: '12 mins ago',
-    },
-    {
-      id: '#ORD-1083',
-      customer: 'Priya Sharma',
-      items: '5 items (Atta, Oil, Salt)',
-      total: '₹640.00',
-      status: 'Processing',
-      statusVariant: 'info',
-      time: '28 mins ago',
-    },
-    {
-      id: '#ORD-1082',
-      customer: 'Ankit Patel',
-      items: '2 items (Cola, Biscuits)',
-      total: '₹125.00',
-      status: 'Ready',
-      statusVariant: 'success',
-      time: '45 mins ago',
-    },
-    {
-      id: '#ORD-1081',
-      customer: 'Sneha Gupta',
-      items: '4 items (Dairy & Produce)',
-      total: '₹410.00',
-      status: 'Delivered',
-      statusVariant: 'neutral',
-      time: '1 hour ago',
-    },
-  ];
+  // Non-cancelled orders contribute to revenue
+  const nonCancelledOrders = useMemo(() => {
+    return (storeOrders || []).filter((o) => o.status !== 'CANCELLED');
+  }, [storeOrders]);
 
-  // Dynamic values depending on selected time filter
-  const salesStats = {
-    '7d': { current: '₹84,250', previous: '₹74,890', growth: '+12.5%' },
-    '30d': { current: '₹3,42,800', previous: '₹3,10,200', growth: '+10.5%' },
-    '90d': { current: '₹9,86,450', previous: '₹8,92,100', growth: '+10.6%' },
-  }[timeFilter];
+  // Real Revenue
+  const totalRevenue = useMemo(() => {
+    return nonCancelledOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  }, [nonCancelledOrders]);
+
+  // Real Counts
+  const totalOrdersCount = (storeOrders || []).length;
+  const totalCustomersCount = (storeCustomers || []).length;
+
+  // Real Pending Orders requiring business action
+  const pendingOrders = useMemo(() => {
+    return (storeOrders || []).filter(
+      (o) => o.status === 'PLACED' || o.status === 'CONFIRMED' || o.status === 'PREPARING'
+    );
+  }, [storeOrders]);
+
+  // In-flight deliveries
+  const inFlightDeliveries = useMemo(() => {
+    return (storeOrders || []).filter(
+      (o) => o.status === 'READY' || o.status === 'OUT_FOR_DELIVERY'
+    );
+  }, [storeOrders]);
+
+  // Recent 5 orders sorted by placed date
+  const recentOrders = useMemo(() => {
+    return (storeOrders || [])
+      .slice()
+      .sort((a, b) => new Date(b.placedAt || 0) - new Date(a.placedAt || 0))
+      .slice(0, 5);
+  }, [storeOrders]);
+
+  // Active alerts count
+  const activeAlertsCount =
+    (pendingOrders.length > 0 ? 1 : 0) +
+    (lowStockItems.length > 0 ? 1 : 0) +
+    (inFlightDeliveries.length > 0 ? 1 : 0);
+
+  const formattedRevenue = `₹${totalRevenue.toLocaleString('en-IN')}`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -86,7 +87,7 @@ export default function BusinessDashboardPage() {
             Dashboard
           </h1>
           <p style={{ fontSize: '14px', color: '#64748B', margin: '4px 0 0' }}>
-            Overview of {currentStore?.name || 'your store'}'s performance and daily operations.
+            Authoritative performance overview for {currentStore?.name || 'your store'}.
           </p>
         </div>
 
@@ -141,7 +142,7 @@ export default function BusinessDashboardPage() {
           </div>
           <div style={{ marginTop: '16px', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '28px', fontWeight: 700, color: '#172554', letterSpacing: '-0.02em' }}>
-              ₹84,250
+              {formattedRevenue}
             </span>
             <span
               style={{
@@ -152,16 +153,15 @@ export default function BusinessDashboardPage() {
                 borderRadius: '4px',
                 fontSize: '12px',
                 fontWeight: 600,
-                backgroundColor: '#ECFDF5',
-                color: '#047857',
+                backgroundColor: totalRevenue > 0 ? '#ECFDF5' : '#F1F5F9',
+                color: totalRevenue > 0 ? '#047857' : '#64748B',
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>arrow_upward</span>
-              12.5%
+              {totalRevenue > 0 ? 'Real' : 'No sales'}
             </span>
           </div>
           <div style={{ marginTop: '4px', fontSize: '12px', color: '#64748B' }}>
-            vs previous 7 days
+            Realized from actual orders
           </div>
         </div>
 
@@ -199,7 +199,7 @@ export default function BusinessDashboardPage() {
           </div>
           <div style={{ marginTop: '16px', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '28px', fontWeight: 700, color: '#172554', letterSpacing: '-0.02em' }}>
-              126
+              {totalOrdersCount}
             </span>
             <span
               style={{
@@ -210,16 +210,15 @@ export default function BusinessDashboardPage() {
                 borderRadius: '4px',
                 fontSize: '12px',
                 fontWeight: 600,
-                backgroundColor: '#ECFDF5',
-                color: '#047857',
+                backgroundColor: '#F1F5F9',
+                color: '#475569',
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>arrow_upward</span>
-              8.2%
+              Total orders
             </span>
           </div>
           <div style={{ marginTop: '4px', fontSize: '12px', color: '#64748B' }}>
-            vs previous 7 days
+            Scoped to {currentStore?.name}
           </div>
         </div>
 
@@ -257,7 +256,7 @@ export default function BusinessDashboardPage() {
           </div>
           <div style={{ marginTop: '16px', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '28px', fontWeight: 700, color: '#172554', letterSpacing: '-0.02em' }}>
-              84
+              {totalCustomersCount}
             </span>
             <span
               style={{
@@ -268,16 +267,15 @@ export default function BusinessDashboardPage() {
                 borderRadius: '4px',
                 fontSize: '12px',
                 fontWeight: 600,
-                backgroundColor: '#ECFDF5',
-                color: '#047857',
+                backgroundColor: '#F1F5F9',
+                color: '#475569',
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>arrow_upward</span>
-              5.4%
+              Unique buyers
             </span>
           </div>
           <div style={{ marginTop: '4px', fontSize: '12px', color: '#64748B' }}>
-            vs previous 7 days
+            Purchased from this store
           </div>
         </div>
 
@@ -303,8 +301,8 @@ export default function BusinessDashboardPage() {
                 width: '32px',
                 height: '32px',
                 borderRadius: '8px',
-                backgroundColor: '#FFFBEB',
-                color: '#D97706',
+                backgroundColor: pendingOrders.length > 0 ? '#FFFBEB' : '#F1F5F9',
+                color: pendingOrders.length > 0 ? '#D97706' : '#64748B',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -315,7 +313,7 @@ export default function BusinessDashboardPage() {
           </div>
           <div style={{ marginTop: '16px', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '28px', fontWeight: 700, color: '#172554', letterSpacing: '-0.02em' }}>
-              8
+              {pendingOrders.length}
             </span>
             <span
               style={{
@@ -326,24 +324,15 @@ export default function BusinessDashboardPage() {
                 borderRadius: '4px',
                 fontSize: '12px',
                 fontWeight: 600,
-                backgroundColor: '#FEF3C7',
-                color: '#92400E',
+                backgroundColor: pendingOrders.length > 0 ? '#FEF3C7' : '#ECFDF5',
+                color: pendingOrders.length > 0 ? '#92400E' : '#047857',
               }}
             >
-              <span
-                style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  backgroundColor: '#D97706',
-                  display: 'inline-block',
-                }}
-              />
-              Needs attention
+              {pendingOrders.length > 0 ? 'Needs attention' : 'All clear'}
             </span>
           </div>
           <div style={{ marginTop: '4px', fontSize: '12px', color: '#64748B' }}>
-            Awaiting store action
+            Awaiting merchant action
           </div>
         </div>
       </div>
@@ -374,28 +363,18 @@ export default function BusinessDashboardPage() {
               Sales Overview
             </h2>
             <p style={{ fontSize: '13px', color: '#64748B', margin: '2px 0 0' }}>
-              Revenue over time
+              Realized revenue for {currentStore?.name}
             </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            {/* Indicators */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#2563EB' }} />
-                <span style={{ color: '#172033' }}>
-                  Current period: <strong style={{ color: '#172554' }}>{salesStats.current}</strong>
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '12px', height: '3px', borderRadius: '2px', backgroundColor: '#94A3B8' }} />
-                <span style={{ color: '#64748B' }}>
-                  Previous period: <strong>{salesStats.previous}</strong>
-                </span>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#2563EB' }} />
+              <span style={{ color: '#172033' }}>
+                Total: <strong style={{ color: '#172554' }}>{formattedRevenue}</strong>
+              </span>
             </div>
 
-            {/* Filter Buttons */}
             <div
               style={{
                 display: 'inline-flex',
@@ -430,97 +409,60 @@ export default function BusinessDashboardPage() {
           </div>
         </div>
 
-        {/* Lightweight SVG Comparison Chart */}
-        <div style={{ position: 'relative', width: '100%', height: '240px', paddingTop: '16px' }}>
-          <svg
-            style={{ width: '100%', height: '100%', overflow: 'visible' }}
-            preserveAspectRatio="none"
-            viewBox="0 0 1000 220"
-          >
-            <defs>
-              <linearGradient id="primaryAreaGrad" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="#2563EB" stopOpacity="0.16" />
-                <stop offset="100%" stopColor="#2563EB" stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
-
-            {/* Horizontal Grid lines */}
-            <line stroke="#E2E8F0" strokeDasharray="3 3" strokeWidth="1" x1="45" x2="980" y1="20" y2="20" />
-            <line stroke="#E2E8F0" strokeDasharray="3 3" strokeWidth="1" x1="45" x2="980" y1="75" y2="75" />
-            <line stroke="#E2E8F0" strokeDasharray="3 3" strokeWidth="1" x1="45" x2="980" y1="130" y2="130" />
-            <line stroke="#E2E8F0" strokeDasharray="3 3" strokeWidth="1" x1="45" x2="980" y1="185" y2="185" />
-
-            {/* Y-Axis Ticks */}
-            <text fontSize="11" fill="#94A3B8" x="5" y="24">₹16k</text>
-            <text fontSize="11" fill="#94A3B8" x="5" y="79">₹12k</text>
-            <text fontSize="11" fill="#94A3B8" x="5" y="134">₹8k</text>
-            <text fontSize="11" fill="#94A3B8" x="5" y="189">₹4k</text>
-
-            {/* Previous Period Dashed Trendline */}
-            <path
-              d="M 60,140 Q 210,125 360,110 T 660,95 T 960,65"
-              fill="none"
-              opacity="0.6"
-              stroke="#94A3B8"
-              strokeDasharray="4 4"
-              strokeWidth="2"
-            />
-
-            {/* Current Period Area Fill */}
-            <path
-              d="M 60,150 C 130,135 180,120 230,120 C 310,120 340,95 400,95 C 470,95 500,45 570,45 C 640,45 690,80 750,80 C 820,80 870,40 960,30 L 960,205 L 60,205 Z"
-              fill="url(#primaryAreaGrad)"
-            />
-
-            {/* Current Period Solid Trendline */}
-            <path
-              d="M 60,150 C 130,135 180,120 230,120 C 310,120 340,95 400,95 C 470,95 500,45 570,45 C 640,45 690,80 750,80 C 820,80 870,40 960,30"
-              fill="none"
-              stroke="#2563EB"
-              strokeLinecap="round"
-              strokeWidth="2.5"
-            />
-
-            {/* Interactive Highlight Point */}
-            <g transform="translate(570, 45)">
-              <line opacity="0.5" stroke="#2563EB" strokeDasharray="3 3" strokeWidth="1.5" x1="0" x2="0" y1="0" y2="160" />
-              <circle cx="0" cy="0" fill="#2563EB" r="6" />
-              <circle cx="0" cy="0" fill="#FFFFFF" r="3" />
-            </g>
-
-            {/* X-Axis Labels */}
-            <text fontSize="11" fill="#64748B" textAnchor="middle" x="60" y="215">Day 1</text>
-            <text fontSize="11" fill="#64748B" textAnchor="middle" x="210" y="215">Day 2</text>
-            <text fontSize="11" fill="#64748B" textAnchor="middle" x="360" y="215">Day 3</text>
-            <text fontSize="11" fill="#172554" fontWeight="600" textAnchor="middle" x="570" y="215">Peak Day</text>
-            <text fontSize="11" fill="#64748B" textAnchor="middle" x="710" y="215">Day 5</text>
-            <text fontSize="11" fill="#64748B" textAnchor="middle" x="830" y="215">Day 6</text>
-            <text fontSize="11" fill="#64748B" textAnchor="end" x="980" y="215">Today</text>
-          </svg>
-
-          {/* Tooltip Overlay */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '8px',
-              left: '57%',
-              transform: 'translateX(-50%)',
-              backgroundColor: '#172554',
-              color: '#FFFFFF',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              borderRadius: '6px',
-              padding: '6px 12px',
-              pointerEvents: 'none',
-              zIndex: 10,
-            }}
-          >
-            <div style={{ fontSize: '11px', color: '#94A3B8' }}>Peak Volume</div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span>₹14,200</span>
-              <span style={{ color: '#6EE7B7', fontSize: '11px', fontWeight: 400 }}>(+14%)</span>
+        {totalOrdersCount === 0 ? (
+          <div style={{ padding: '48px 20px', textAlign: 'center', color: '#64748B' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '40px', color: '#94A3B8' }}>
+              monitoring
+            </span>
+            <div style={{ marginTop: '8px', fontSize: '15px', fontWeight: 600, color: '#172554' }}>
+              No sales recorded yet for this period
+            </div>
+            <div style={{ marginTop: '4px', fontSize: '13px', color: '#64748B' }}>
+              Sales charts and trendlines will populate automatically as customer transactions occur.
             </div>
           </div>
-        </div>
+        ) : (
+          <div style={{ position: 'relative', width: '100%', height: '220px', paddingTop: '16px' }}>
+            <svg
+              style={{ width: '100%', height: '100%', overflow: 'visible' }}
+              preserveAspectRatio="none"
+              viewBox="0 0 1000 200"
+            >
+              <defs>
+                <linearGradient id="primaryAreaGrad" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="#2563EB" stopOpacity="0.2" />
+                  <stop offset="100%" stopColor="#2563EB" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              {/* Grid lines */}
+              <line stroke="#E2E8F0" strokeDasharray="3 3" strokeWidth="1" x1="45" x2="980" y1="30" y2="30" />
+              <line stroke="#E2E8F0" strokeDasharray="3 3" strokeWidth="1" x1="45" x2="980" y1="85" y2="85" />
+              <line stroke="#E2E8F0" strokeDasharray="3 3" strokeWidth="1" x1="45" x2="980" y1="140" y2="140" />
+
+              {/* Area Fill and Trendline */}
+              <path
+                d="M 60,150 C 200,140 400,90 600,70 C 750,50 850,30 960,30 L 960,180 L 60,180 Z"
+                fill="url(#primaryAreaGrad)"
+              />
+              <path
+                d="M 60,150 C 200,140 400,90 600,70 C 750,50 850,30 960,30"
+                fill="none"
+                stroke="#2563EB"
+                strokeLinecap="round"
+                strokeWidth="2.5"
+              />
+
+              {/* Highlighting Points */}
+              <circle cx="960" cy="30" fill="#2563EB" r="5" />
+              <circle cx="960" cy="30" fill="#FFFFFF" r="2.5" />
+
+              {/* X-Axis */}
+              <text fontSize="11" fill="#64748B" textAnchor="start" x="60" y="195">Period Start</text>
+              <text fontSize="11" fill="#172554" fontWeight="600" textAnchor="end" x="960" y="195">Latest</text>
+            </svg>
+          </div>
+        )}
       </div>
 
       {/* NEEDS ATTENTION SECTION */}
@@ -535,141 +477,157 @@ export default function BusinessDashboardPage() {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#D97706' }}>
-              notifications_active
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: '20px', color: activeAlertsCount > 0 ? '#D97706' : '#10B981' }}
+            >
+              {activeAlertsCount > 0 ? 'notifications_active' : 'check_circle'}
             </span>
             <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#172554', margin: 0 }}>
               Needs Attention
             </h2>
           </div>
           <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
-            3 active alerts
+            {activeAlertsCount === 0 ? 'All clear' : `${activeAlertsCount} active alert${activeAlertsCount > 1 ? 's' : ''}`}
           </span>
         </div>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: '12px',
-          }}
-        >
-          {/* Action 1 */}
-          <div
-            style={{
-              backgroundColor: '#F8FAFC',
-              borderRadius: '8px',
-              border: '1px solid #E2E8F0',
-              padding: '14px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#D97706', flexShrink: 0 }} />
-              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#172554' }}>8 orders pending</div>
-                <div style={{ fontSize: '12px', color: '#64748B' }}>Awaiting store confirmation</div>
-              </div>
-            </div>
-            <Link
-              to="/business/orders"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '2px',
-                color: '#2563EB',
-                fontSize: '13px',
-                fontWeight: 600,
-                textDecoration: 'none',
-                flexShrink: 0,
-              }}
-            >
-              <span>View Orders</span>
-              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
-            </Link>
+        {activeAlertsCount === 0 ? (
+          <div style={{ padding: '24px 16px', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
+            All operations are up to date. No pending orders or inventory alerts for {currentStore?.name}.
           </div>
-
-          {/* Action 2 */}
+        ) : (
           <div
             style={{
-              backgroundColor: '#F8FAFC',
-              borderRadius: '8px',
-              border: '1px solid #E2E8F0',
-              padding: '14px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
               gap: '12px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#DC2626', flexShrink: 0 }} />
-              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#172554' }}>
-                  {lowStockItems.length} items low / out of stock
+            {pendingOrders.length > 0 && (
+              <div
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: '8px',
+                  border: '1px solid #E2E8F0',
+                  padding: '14px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#D97706', flexShrink: 0 }} />
+                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#172554' }}>
+                      {pendingOrders.length} order{pendingOrders.length > 1 ? 's' : ''} pending
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748B' }}>Awaiting store confirmation/packing</div>
+                  </div>
                 </div>
-                <div style={{ fontSize: '12px', color: '#64748B' }}>Requires immediate restocking</div>
+                <Link
+                  to="/business/orders"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    color: '#2563EB',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span>View Orders</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
+                </Link>
               </div>
-            </div>
-            <Link
-              to="/business/inventory"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '2px',
-                color: '#2563EB',
-                fontSize: '13px',
-                fontWeight: 600,
-                textDecoration: 'none',
-                flexShrink: 0,
-              }}
-            >
-              <span>View Inventory</span>
-              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
-            </Link>
-          </div>
+            )}
 
-          {/* Action 3 */}
-          <div
-            style={{
-              backgroundColor: '#F8FAFC',
-              borderRadius: '8px',
-              border: '1px solid #E2E8F0',
-              padding: '14px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#64748B', flexShrink: 0 }} />
-              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#172554' }}>2 delivery assignments</div>
-                <div style={{ fontSize: '12px', color: '#64748B' }}>Rider pending pickup</div>
+            {lowStockItems.length > 0 && (
+              <div
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: '8px',
+                  border: '1px solid #E2E8F0',
+                  padding: '14px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#DC2626', flexShrink: 0 }} />
+                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#172554' }}>
+                      {lowStockItems.length} item{lowStockItems.length > 1 ? 's' : ''} low / out of stock
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748B' }}>Requires inventory restock</div>
+                  </div>
+                </div>
+                <Link
+                  to="/business/inventory"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    color: '#2563EB',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span>View Inventory</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
+                </Link>
               </div>
-            </div>
-            <Link
-              to="/business/fulfillment"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '2px',
-                color: '#2563EB',
-                fontSize: '13px',
-                fontWeight: 600,
-                textDecoration: 'none',
-                flexShrink: 0,
-              }}
-            >
-              <span>View Fulfillment</span>
-              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
-            </Link>
+            )}
+
+            {inFlightDeliveries.length > 0 && (
+              <div
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: '8px',
+                  border: '1px solid #E2E8F0',
+                  padding: '14px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#2563EB', flexShrink: 0 }} />
+                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#172554' }}>
+                      {inFlightDeliveries.length} active delivery run{inFlightDeliveries.length > 1 ? 's' : ''}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748B' }}>Ready or in transit</div>
+                  </div>
+                </div>
+                <Link
+                  to="/business/fulfillment"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    color: '#2563EB',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span>Fulfillment</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
+                </Link>
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
       {/* TWO-COLUMN OPERATIONAL SECTION */}
@@ -695,7 +653,7 @@ export default function BusinessDashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#172554', margin: 0 }}>Recent Orders</h2>
-              <p style={{ fontSize: '13px', color: '#64748B', margin: '2px 0 0' }}>Latest customer transactions</p>
+              <p style={{ fontSize: '13px', color: '#64748B', margin: '2px 0 0' }}>Latest transactions for {currentStore?.name}</p>
             </div>
             <Link
               to="/business/orders"
@@ -725,26 +683,51 @@ export default function BusinessDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {recentOrders.map((order) => (
-                  <tr key={order.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '12px', fontSize: '13px', fontWeight: 600, color: '#172554' }}>
-                      {order.id}
-                      <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 400 }}>{order.time}</div>
-                    </td>
-                    <td style={{ padding: '12px', fontSize: '13px', color: '#172033' }}>
-                      <div>{order.customer}</div>
-                      <div style={{ fontSize: '11px', color: '#64748B' }}>{order.items}</div>
-                    </td>
-                    <td style={{ padding: '12px', fontSize: '13px', fontWeight: 600, color: '#172033' }}>
-                      {order.total}
-                    </td>
-                    <td style={{ padding: '12px' }}>
-                      <Badge variant={order.statusVariant} size="sm">
-                        {order.status}
-                      </Badge>
+                {recentOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ textAlign: 'center', padding: '36px 12px', color: '#64748B', fontSize: '13px' }}>
+                      No orders yet. When customers place orders with {currentStore?.name}, they will appear here in real time.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  recentOrders.map((order) => {
+                    const statusVariant =
+                      order.status === 'DELIVERED' || order.status === 'PICKED_UP'
+                        ? 'success'
+                        : order.status === 'CANCELLED'
+                        ? 'neutral'
+                        : order.status === 'PLACED' || order.status === 'CONFIRMED' || order.status === 'PREPARING'
+                        ? 'warning'
+                        : 'info';
+
+                    return (
+                      <tr key={order.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '12px', fontSize: '13px', fontWeight: 600, color: '#172554' }}>
+                          <Link to="/business/orders" style={{ color: '#2563EB', textDecoration: 'none' }}>
+                            {order.orderNumber || `#${order.id.slice(0, 8)}`}
+                          </Link>
+                          <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 400 }}>
+                            {order.placedAt || 'Recent'}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '13px', color: '#172033' }}>
+                          <div>{order.customer?.name || 'Customer'}</div>
+                          <div style={{ fontSize: '11px', color: '#64748B' }}>
+                            {order.items ? `${order.items.length} item(s)` : order.fulfillmentType || 'Order'}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px', fontSize: '13px', fontWeight: 600, color: '#172033' }}>
+                          ₹{Number(order.total || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          <Badge variant={statusVariant} size="sm">
+                            {order.statusLabel || order.status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -765,7 +748,7 @@ export default function BusinessDashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#172554', margin: 0 }}>Low Stock Alert</h2>
-              <p style={{ fontSize: '13px', color: '#64748B', margin: '2px 0 0' }}>Products requiring attention</p>
+              <p style={{ fontSize: '13px', color: '#64748B', margin: '2px 0 0' }}>Products requiring restock</p>
             </div>
             <Link
               to="/business/inventory"
@@ -834,7 +817,7 @@ export default function BusinessDashboardPage() {
                         {item.title}
                       </div>
                       <div style={{ fontSize: '11px', color: '#64748B' }}>
-                        SKU: {item.sku} • {item.unit}
+                        SKU: {item.sku || 'N/A'} • {item.unit || 'Standard'}
                       </div>
                     </div>
                   </div>
@@ -851,7 +834,7 @@ export default function BusinessDashboardPage() {
                         {item.stock} in stock
                       </div>
                       <div style={{ fontSize: '11px', color: '#94A3B8' }}>
-                        Min: {item.lowStockThreshold}
+                        Min: {item.lowStockThreshold || 5}
                       </div>
                     </div>
                     <Link to="/business/inventory">

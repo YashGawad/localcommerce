@@ -1,18 +1,19 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useMemo } from 'react';
-import { INITIAL_NOTIFICATIONS } from '../data/notifications';
 import { useCatalog } from './CatalogContext';
 
 const NotificationsContext = createContext(null);
 
 export function NotificationsProvider({ children }) {
   const { currentStore } = useCatalog();
-  const [notificationsMap, setNotificationsMap] = useState(INITIAL_NOTIFICATIONS);
+  const currentStoreId = currentStore?.id;
+  const [notificationsMap, setNotificationsMap] = useState({});
 
   // Notifications belonging to the currently active store
   const notifications = useMemo(() => {
-    return notificationsMap[currentStore.id] || [];
-  }, [notificationsMap, currentStore.id]);
+    if (!currentStoreId) return [];
+    return notificationsMap[currentStoreId] || [];
+  }, [notificationsMap, currentStoreId]);
 
   // Unread count strictly for the active store
   const unreadCount = useMemo(() => {

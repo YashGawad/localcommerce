@@ -1,21 +1,17 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
-import { useOperations } from '../../context/OperationsContext';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import AdminKpiCard from '../../components/admin/AdminKpiCard';
 import AdminStatusBadge from '../../components/admin/AdminStatusBadge';
 
 export default function AdminDashboardPage() {
-  const { stores, users, platformKpis, notifications } = useAdmin();
-  const { ordersMap } = useOperations();
+  const { stores, users, platformKpis, notifications, orders } = useAdmin();
 
-  // Aggregate orders across all stores
+  // Real orders across all stores from PostgreSQL
   const allOrders = useMemo(() => {
-    return Object.values(ordersMap || {})
-      .flat()
-      .sort((a, b) => (b.id > a.id ? 1 : -1));
-  }, [ordersMap]);
+    return (orders || []).slice().sort((a, b) => (b.id > a.id ? 1 : -1));
+  }, [orders]);
 
   const totalGmv = useMemo(() => {
     return allOrders

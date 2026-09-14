@@ -1,32 +1,135 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useMemo } from 'react';
-import { MOCK_STORES } from '../data/stores';
-import { GLOBAL_PRODUCTS, STORE_LISTINGS } from '../data/products';
-import {
-  INITIAL_ADMIN_USERS,
-  INITIAL_REVIEWS,
-  SAAS_PLANS,
-  INITIAL_STORE_SUBSCRIPTIONS,
-  INITIAL_ADMIN_NOTIFICATIONS,
-  INITIAL_PLATFORM_SETTINGS,
-} from '../data/adminMockData';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { useAuth } from './AuthContext';
+import { storeService } from '../services/storeService';
+import { productService } from '../services/productService';
+import { adminService } from '../services/adminService';
+import { reviewService } from '../services/reviewService';
+
+import { orderService } from '../services/orderService';
 
 const AdminContext = createContext(null);
 
 export function AdminProvider({ children }) {
+  const { currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin';
+
   // 1. Platform Stores State
-  const [stores, setStores] = useState(() =>
-    MOCK_STORES.map((s) => ({
-      ...s,
-      status: s.isOpen ? 'Active' : (s.id === 'store_04' ? 'Suspended' : 'Inactive'),
-      verified: s.id !== 'store_04',
-      kycStatus: s.id === 'store_04' ? 'Pending Review' : 'Verified',
-      commissionRate: s.id === 'store_01' ? 3.5 : 5.0,
-      joinedDate: 'Jan 2024',
-      totalRevenue: s.id === 'store_01' ? '₹4,82,400' : (s.id === 'store_02' ? '₹3,94,200' : '₹1,24,000'),
-      platformNotes: s.id === 'store_04' ? 'Temporary operational suspension due to repeated delivery delay complaints.' : 'Standard compliant merchant.',
-    }))
-  );
+  const [stores, setStores] = useState([]);
+
+  // 2. Users Management State
+  const [users, setUsers] = useState([]);
+
+  // 3. Global Products Catalog State
+  const [globalProducts, setGlobalProducts] = useState([]);
+
+  // 4. Reviews & Moderation State
+  const [reviews, setReviews] = useState([]);
+
+  // 5. Subscriptions State
+  const [subscriptions, setSubscriptions] = useState([]);
+
+  // 6. Admin Notifications State
+  const [notifications, setNotifications] = useState([]);
+
+  // 7. Platform Settings State
+  const [platformSettings, setPlatformSettings] = useState({});
+
+  // 8. Platform Orders State
+  const [orders, setOrders] = useState([]);
+
+  // Reload admin data from real backend endpoints
+  const refreshAdminData = useCallback(async () => {
+    try {
+      const [storesData, globalProdsData] = await Promise.all([
+        storeService.getAllStores().catch(() => []),
+        productService.getGlobalProducts().catch(() => []),
+      ]);
+
+      if (Array.isArray(storesData)) {
+        setStores(
+          storesData.map((s) => ({
+            ...s,
+            status: s.isOpen ? 'Active' : 'Inactive',
+            verified: true,
+            kycStatus: 'Verified',
+            commissionRate: 5.0,
+            joinedDate: s.created_at
+              ? new Date(s.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
+              : 'Recent',
+            totalRevenue: '₹0',
+            platformNotes: 'Verified platform merchant.',
+          }))
+        );
+      }
+
+      if (Array.isArray(globalProdsData)) {
+        setGlobalProducts(globalProdsData);
+      }
+
+      if (isAdmin) {
+        const [ordersData, usersData, reviewsData, subsData, settingsData, notifsData] = await Promise.all([
+          orderService.getOrders().catch(() => []),
+          adminService.getUsers().catch(() => []),
+          reviewService.getReviews().catch(() => []),
+          adminService.getSubscriptions().catch(() => []),
+          adminService.getPlatformSettings().catch(() => ({})),
+          adminService.getNotifications().catch(() => []),
+        ]);
+
+        if (Array.isArray(ordersData)) {
+          setOrders(
+            ordersData.map((o) => ({
+              id: o.order_number || o.id,
+              rawId: o.id,
+              storeId: o.store_id,
+              storeName: o.store_name || 'Store',
+              date: o.created_at
+                ? new Date(o.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                : 'Recent',
+              placedAt: o.created_at
+                ? new Date(o.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                : 'Recent',
+              status: o.status,
+              fulfillmentType: (o.fulfillment_type || 'delivery').toLowerCase(),
+              total: parseFloat(o.total_amount || 0).toFixed(2),
+              paymentStatus: o.payment_status || 'PENDING',
+              paymentMethod: o.payment_method || 'UPI',
+              customer: {
+                name: o.delivery_recipient_name || 'Customer',
+                phone: o.delivery_recipient_phone || 'N/A',
+              },
+              items: o.items || [],
+            }))
+          );
+        }
+        if (Array.isArray(usersData)) setUsers(usersData);
+        if (Array.isArray(reviewsData)) setReviews(reviewsData);
+        if (Array.isArray(subsData)) setSubscriptions(subsData);
+        if (settingsData && typeof settingsData === 'object') setPlatformSettings(settingsData);
+        if (Array.isArray(notifsData)) setNotifications(notifsData);
+      }
+    } catch (err) {
+      console.warn('Admin refreshAdminData error:', err);
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function load() {
+      try {
+        await refreshAdminData();
+      } catch (err) {
+        if (isMounted) {
+          console.warn('Admin load error:', err);
+        }
+      }
+    }
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshAdminData]);
 
   const updateStoreStatus = (storeId, newStatus) => {
     setStores((prev) =>
@@ -56,9 +159,6 @@ export function AdminProvider({ children }) {
     );
   };
 
-  // 2. Users Management State
-  const [users, setUsers] = useState(INITIAL_ADMIN_USERS);
-
   const updateUserStatus = (userId, newStatus) => {
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, status: newStatus } : u))
@@ -81,7 +181,7 @@ export function AdminProvider({ children }) {
       status: 'Active',
       joinedDate: 'Today',
       lastActive: 'Just now',
-      avatar: userData.name
+      avatar: (userData.name || 'U')
         .split(' ')
         .map((n) => n[0])
         .join('')
@@ -93,9 +193,6 @@ export function AdminProvider({ children }) {
     return newUser;
   };
 
-  // 3. Global Products Catalog State
-  const [globalProducts, setGlobalProducts] = useState(GLOBAL_PRODUCTS);
-
   const addGlobalProduct = (productData) => {
     const newProd = {
       id: `prod_${Date.now()}`,
@@ -106,9 +203,7 @@ export function AdminProvider({ children }) {
       category: productData.category || 'groceries',
       categoryName: productData.categoryName || 'Groceries & Staples',
       description: productData.description || '',
-      image:
-        productData.image ||
-        'https://lh3.googleusercontent.com/aida/AEtjO1VVsaS-NlV_iizo17KBfTVuGAaanpyY2CDU9p_bkZi5H5HHm-Zs5vkR4b45iuhSP93NY0Wkl9wj43SgRNfTU0HHyFtoHF58-nEW_ZHvJvo_l5094O-UlcNPsvKaDIlLvj-3Q3OKmG8-eeJK_EKg77JRsOA0oYUmkyWjk8RBjHolT0U9nokpEpGDmLtB7fmT3czI-eKsPMvpplTUQceZxAZIlPOlt-ZdJyv4qUtYVpDY1PY6Qkup3p74',
+      image: productData.image || '',
       mrp: Number(productData.mrp) || 0,
       rating: 5.0,
       reviewsCount: 0,
@@ -132,9 +227,6 @@ export function AdminProvider({ children }) {
     );
   };
 
-  // 4. Reviews & Moderation State
-  const [reviews, setReviews] = useState(INITIAL_REVIEWS);
-
   const updateReviewStatus = (reviewId, newStatus) => {
     setReviews((prev) =>
       prev.map((r) => (r.id === reviewId ? { ...r, status: newStatus } : r))
@@ -143,30 +235,26 @@ export function AdminProvider({ children }) {
 
   const addModeratorNote = (reviewId, note) => {
     setReviews((prev) =>
-      prev.map((r) => (r.id === reviewId ? { ...r, moderatorNote: note } : r))
+      prev.map((r) =>
+        r.id === reviewId
+          ? {
+              ...r,
+              moderatorNotes: [...(r.moderatorNotes || []), { text: note, date: 'Today' }],
+            }
+          : r
+      )
     );
   };
 
-  // 5. Subscriptions State
-  const [subscriptions, setSubscriptions] = useState(INITIAL_STORE_SUBSCRIPTIONS);
-  const plans = SAAS_PLANS;
-
   const changeStorePlan = (storeId, planId, billingCycle = 'Monthly') => {
-    const selectedPlan = plans.find((p) => p.id === planId) || plans[0];
-    const amount = billingCycle === 'Annual' ? selectedPlan.annualPrice : selectedPlan.monthlyPrice;
-
     setSubscriptions((prev) =>
       prev.map((sub) =>
         sub.storeId === storeId
           ? {
               ...sub,
-              planId: selectedPlan.id,
-              planName: selectedPlan.name,
+              planId,
               billingCycle,
-              amount,
               status: 'Active',
-              listingsLimit: selectedPlan.maxListings,
-              renewalDate: '01 Oct 2026',
             }
           : sub
       )
@@ -178,9 +266,6 @@ export function AdminProvider({ children }) {
       prev.map((sub) => (sub.storeId === storeId ? { ...sub, status } : sub))
     );
   };
-
-  // 6. Admin Notifications State
-  const [notifications, setNotifications] = useState(INITIAL_ADMIN_NOTIFICATIONS);
 
   const markNotificationRead = (notificationId) => {
     setNotifications((prev) =>
@@ -211,20 +296,21 @@ export function AdminProvider({ children }) {
     return newAlert;
   };
 
-  // 7. Platform Settings State
-  const [platformSettings, setPlatformSettings] = useState(INITIAL_PLATFORM_SETTINGS);
-
-  const updatePlatformSettings = (newSettings) => {
+  const updatePlatformSettings = async (newSettings) => {
     setPlatformSettings((prev) => ({ ...prev, ...newSettings }));
   };
 
-  // Computed Platform KPIs
+  // Computed Platform KPIs from actual backend records
   const platformKpis = useMemo(() => {
-    const activeStores = stores.filter((s) => s.status === 'Active').length;
+    const activeStores = stores.filter((s) => s.status === 'Active' || s.isOpen).length;
     const suspendedStores = stores.filter((s) => s.status === 'Suspended').length;
-    const pendingReviews = reviews.filter((r) => r.status === 'Pending Review' || r.status === 'Flagged').length;
-    const totalListings = Object.values(STORE_LISTINGS).reduce((sum, list) => sum + list.length, 0);
+    const pendingReviews = reviews.filter((r) => r.status === 'Pending Review' || r.status === 'pending' || r.status === 'Flagged').length;
     const unreadAlerts = notifications.filter((n) => !n.isRead).length;
+
+    const totalOrders = orders.length;
+    const totalGmv = orders
+      .filter((o) => o.status !== 'CANCELLED')
+      .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
     return {
       totalStores: stores.length,
@@ -232,12 +318,14 @@ export function AdminProvider({ children }) {
       suspendedStores,
       totalUsers: users.length,
       totalGlobalProducts: globalProducts.length,
-      totalListings,
+      totalListings: globalProducts.length,
       pendingReviews,
       unreadAlerts,
-      activeSubscriptions: subscriptions.filter((s) => s.status === 'Active').length,
+      activeSubscriptions: subscriptions.filter((s) => s.status === 'Active' || s.status === 'active').length,
+      totalOrders,
+      totalGmv,
     };
-  }, [stores, reviews, users, globalProducts, notifications, subscriptions]);
+  }, [stores, reviews, users, globalProducts, notifications, subscriptions, orders]);
 
   const value = {
     stores,
@@ -256,7 +344,7 @@ export function AdminProvider({ children }) {
     updateReviewStatus,
     addModeratorNote,
     subscriptions,
-    plans,
+    plans: [],
     changeStorePlan,
     updateSubscriptionStatus,
     notifications,
@@ -266,7 +354,9 @@ export function AdminProvider({ children }) {
     broadcastNotification,
     platformSettings,
     updatePlatformSettings,
+    orders,
     platformKpis,
+    refreshAdminData,
   };
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
