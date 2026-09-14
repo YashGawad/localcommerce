@@ -39,18 +39,26 @@ export default function BusinessProductDetailsPage() {
     ? (((product.price - (product.cost || 0)) / product.price) * 100).toFixed(1)
     : 0;
 
-  const handleQuickAdjust = (delta) => {
-    const newStock = adjustStock(product.id, delta);
-    setFeedback(`Stock updated to ${newStock} units`);
+  const handleQuickAdjust = async (delta) => {
+    try {
+      const newStock = await adjustStock(product.id, delta);
+      setFeedback(`Stock updated to ${newStock} units`);
+    } catch (err) {
+      setFeedback(`Failed to update stock: ${err.message}`);
+    }
     setTimeout(() => setFeedback(''), 2500);
   };
 
-  const handleCustomAdjust = (isAdd) => {
+  const handleCustomAdjust = async (isAdd) => {
     const qty = parseInt(adjustAmount, 10);
     if (isNaN(qty) || qty <= 0) return;
     const delta = isAdd ? qty : -qty;
-    const newStock = adjustStock(product.id, delta);
-    setFeedback(`Stock updated to ${newStock} units`);
+    try {
+      const newStock = await adjustStock(product.id, delta);
+      setFeedback(`Stock updated to ${newStock} units`);
+    } catch (err) {
+      setFeedback(`Failed to update stock: ${err.message}`);
+    }
     setTimeout(() => setFeedback(''), 2500);
   };
 

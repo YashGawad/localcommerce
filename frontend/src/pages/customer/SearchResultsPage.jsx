@@ -1,25 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { GLOBAL_PRODUCTS, STORE_LISTINGS } from '../../data/products';
-import { MOCK_STORES } from '../../data/stores';
+import storeService from '../../services/storeService';
+import productService from '../../services/productService';
 import ProductCard from '../../components/customer/ProductCard';
 import Button from '../../components/shared/Button';
 import Badge from '../../components/shared/Badge';
 
 /**
  * Screen 2: Customer Search Results
- * Visual Source of Truth: Stitch screen 'LocalCommerce Search Results' (6cfc1e5cecc44acfabf9521793237a42)
- * Demonstrates cross-store discovery: searching "milk" shows matching products and which stores offer them.
+ * Connects cross-store discovery with real active stores and live store product listings
  */
 export default function SearchResultsPage() {
   const [searchParams] = useSearchParams();
   const rawQuery = searchParams.get('q');
-  const query = rawQuery !== null ? rawQuery : 'milk'; // Default to "milk" per Stitch demonstration
+  const query = rawQuery !== null ? rawQuery : 'milk';
+
+  const [stores, setStores] = useState([]);
+  const [allStoreProducts, setAllStoreProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Filter States
-  const [selectedStores, setSelectedStores] = useState(['store_01', 'store_02']);
+  const [selectedStores, setSelectedStores] = useState([]);
   const [inStockOnly, setInStockOnly] = useState(true);
-  const [fulfillmentFilter, setFulfillmentFilter] = useState('all'); // 'all', 'delivery', 'pickup'
+  const [fulfillmentFilter, setFulfillmentFilter] = useState('all');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadSearchCatalog() {
+      try {
+        setLoading(true);
+        const loadedStores = await storeService.getAllStores();
+        const activeStores = loadedStores.filter((s) => s.status === 'active');
+
+        // Fetch products for active stores
+        const productPromises = activeStores.map(async (st) => {
+          const prods = await productService.getStoreProducts(st.id);
+          return prods.map((p) => ({ ...p, store: st }));
+        });
+
+        const storeProductLists = await Promise.all(productPromises);
+        const flatProducts = storeProductLists.flat();
+
+        if (isMounted) {
+          setStores(activeStores);
+          setSelectedStores(activeStores.map((s) => s.id));
+          setAllStoreProducts(flatProducts);
+        }
+      } catch (err) {
+        console.error('Failed to load search catalog:', err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadSearchCatalog();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const toggleStore = (storeId) => {
     if (selectedStores.includes(storeId)) {
@@ -29,46 +70,33 @@ export default function SearchResultsPage() {
     }
   };
 
-  // Find all store listings matching the query
-  const searchResults = [];
+  // Filter results
   const normalizedQuery = query.toLowerCase().trim();
-
-  GLOBAL_PRODUCTS.forEach((prod) => {
-    const matchesProduct =
-      prod.title.toLowerCase().includes(normalizedQuery) ||
-      prod.brand.toLowerCase().includes(normalizedQuery) ||
-      prod.categoryName.toLowerCase().includes(normalizedQuery);
-
-    if (matchesProduct) {
-      // Find listings for this product across selected stores
-      MOCK_STORES.forEach((store) => {
-        if (selectedStores.length === 0 || selectedStores.includes(store.id)) {
-          const storeItems = STORE_LISTINGS[store.id] || [];
-          const listing = storeItems.find((item) => item.productId === prod.id);
-
-          if (listing) {
-            if (inStockOnly && listing.availability === 'Out of Stock') {
-              return;
-            }
-            if (fulfillmentFilter === 'delivery' && !store.fulfillmentTypes.includes('delivery')) {
-              return;
-            }
-            if (fulfillmentFilter === 'pickup' && !store.fulfillmentTypes.includes('pickup')) {
-              return;
-            }
-
-            searchResults.push({
-              key: `${prod.id}_${store.id}`,
-              product: prod,
-              store,
-              storePrice: listing.storePrice,
-              mrp: listing.mrp,
-              availability: listing.availability,
-            });
-          }
-        }
-      });
+  const searchResults = allStoreProducts.filter((item) => {
+    // 1. Store filter
+    if (selectedStores.length > 0 && !selectedStores.includes(item.storeId)) {
+      return false;
     }
+
+    // 2. Stock filter
+    if (inStockOnly && item.availability === 'Out of Stock') {
+      return false;
+    }
+
+    // 3. Fulfillment filter
+    if (fulfillmentFilter === 'delivery' && !item.store?.fulfillmentTypes?.includes('delivery')) {
+      return false;
+    }
+    if (fulfillmentFilter === 'pickup' && !item.store?.fulfillmentTypes?.includes('pickup')) {
+      return false;
+    }
+
+    // 4. Text query match
+    if (!normalizedQuery) return true;
+    const titleMatch = (item.title || item.name || '').toLowerCase().includes(normalizedQuery);
+    const brandMatch = (item.brand || '').toLowerCase().includes(normalizedQuery);
+    const catMatch = (item.categoryName || '').toLowerCase().includes(normalizedQuery);
+    return titleMatch || brandMatch || catMatch;
   });
 
   return (
@@ -83,7 +111,7 @@ export default function SearchResultsPage() {
             <Badge variant="info" size="sm">Cross-Store Discovery</Badge>
           </div>
           <p style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
-            Showing <strong>{searchResults.length} results</strong> for "{query}" across nearby neighbourhood stores in Panch Pakhadi (400602)
+            Showing <strong>{searchResults.length} results</strong> for "{query}" across nearby neighbourhood stores
           </p>
         </div>
 
@@ -92,7 +120,7 @@ export default function SearchResultsPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              setSelectedStores(['store_01', 'store_02', 'store_03', 'store_04']);
+              setSelectedStores(stores.map((s) => s.id));
               setInStockOnly(false);
               setFulfillmentFilter('all');
             }}
@@ -111,7 +139,7 @@ export default function SearchResultsPage() {
           alignItems: 'start',
         }}
       >
-        {/* Left Filter Facet Panel (Pinned on Desktop) */}
+        {/* Left Filter Facet Panel */}
         <aside
           style={{
             backgroundColor: '#FFFFFF',
@@ -138,7 +166,7 @@ export default function SearchResultsPage() {
               Nearby Stores
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {MOCK_STORES.map((store) => (
+              {stores.map((store) => (
                 <label
                   key={store.id}
                   style={{
@@ -161,7 +189,7 @@ export default function SearchResultsPage() {
                     <span>{store.name}</span>
                   </span>
                   <span style={{ fontSize: '11px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '1px 6px', borderRadius: '4px' }}>
-                    {store.distance?.split(' ')[0]}
+                    {store.distance?.split(' ')[0] || '0.8km'}
                   </span>
                 </label>
               ))}
@@ -184,49 +212,36 @@ export default function SearchResultsPage() {
             </label>
           </div>
 
-          {/* Fulfillment Type */}
+          {/* Fulfillment Method */}
           <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B', letterSpacing: '0.03em', marginBottom: '8px' }}>
-              Fulfillment Speed
+              Fulfillment Method
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="fulfillment"
-                  checked={fulfillmentFilter === 'all'}
-                  onChange={() => setFulfillmentFilter('all')}
-                  style={{ accentColor: '#2563EB' }}
-                />
-                <span>All Options</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="fulfillment"
-                  checked={fulfillmentFilter === 'delivery'}
-                  onChange={() => setFulfillmentFilter('delivery')}
-                  style={{ accentColor: '#2563EB' }}
-                />
-                <span>Store Delivery (20–35m)</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="fulfillment"
-                  checked={fulfillmentFilter === 'pickup'}
-                  onChange={() => setFulfillmentFilter('pickup')}
-                  style={{ accentColor: '#2563EB' }}
-                />
-                <span>Self Pickup (Ready in 10–15m)</span>
-              </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: '#172033' }}>
+              {['all', 'delivery', 'pickup'].map((mode) => (
+                <label key={mode} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="fulfillment"
+                    checked={fulfillmentFilter === mode}
+                    onChange={() => setFulfillmentFilter(mode)}
+                    style={{ accentColor: '#2563EB' }}
+                  />
+                  <span style={{ textTransform: 'capitalize' }}>{mode === 'all' ? 'All Methods' : mode}</span>
+                </label>
+              ))}
             </div>
           </div>
         </aside>
 
-        {/* Right Results Grid */}
-        <div style={{ flex: 1, minWidth: '320px' }}>
-          {searchResults.length === 0 ? (
+        {/* Right Search Results Column */}
+        <main style={{ flex: 1, minWidth: 0 }}>
+          {loading ? (
+            <div style={{ padding: '48px 16px', textAlign: 'center', color: '#64748B' }}>
+              <div style={{ display: 'inline-block', width: '32px', height: '32px', border: '3px solid #E2E8F0', borderTopColor: '#2563EB', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <div style={{ marginTop: '12px', fontSize: '14px', fontWeight: 500 }}>Searching local stores...</div>
+            </div>
+          ) : searchResults.length === 0 ? (
             <div
               style={{
                 backgroundColor: '#FFFFFF',
@@ -234,49 +249,40 @@ export default function SearchResultsPage() {
                 borderRadius: '10px',
                 padding: '48px 24px',
                 textAlign: 'center',
+                color: '#64748B',
               }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#94A3B8' }}>
                 search_off
               </span>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#172033', marginTop: '12px' }}>
-                No direct matches found for "{query}"
-              </h3>
-              <p style={{ fontSize: '13px', color: '#64748B', marginTop: '4px', maxWidth: '360px', margin: '4px auto 16px' }}>
-                Try adjusting your search terms or clearing your selected store filters.
+              <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#172033', marginTop: '12px' }}>
+                No items matching "{query}"
+              </h2>
+              <p style={{ fontSize: '13px', marginTop: '4px' }}>
+                Try adjusting your search terms or uncheck filters to explore other local offerings.
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedStores(['store_01', 'store_02', 'store_03', 'store_04']);
-                  setInStockOnly(false);
-                }}
-              >
-                Clear Filters
-              </Button>
             </div>
           ) : (
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
                 gap: '16px',
               }}
             >
               {searchResults.map((item) => (
                 <ProductCard
-                  key={item.key}
-                  product={item.product}
+                  key={`${item.id}_${item.storeId}`}
+                  product={item}
                   store={item.store}
-                  storePrice={item.storePrice}
+                  storePrice={item.price}
                   mrp={item.mrp}
                   availability={item.availability}
                 />
               ))}
             </div>
           )}
-        </div>
+        </main>
       </div>
     </div>
   );

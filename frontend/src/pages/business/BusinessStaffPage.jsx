@@ -14,11 +14,14 @@ export default function BusinessStaffPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [deleteConfirmStaff, setDeleteConfirmStaff] = useState(null);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Form State
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
+    password: '',
     role: 'Staff',
     scope: 'Order Packing & Counter Bay',
   });
@@ -64,23 +67,35 @@ export default function BusinessStaffPage() {
     setFormData((prev) => ({ ...prev, role, scope: defaultScope }));
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim()) {
-      showToast('Please fill in all required fields');
+    if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim() || !formData.password) {
+      showToast('Please fill in all required fields including initial password');
+      return;
+    }
+    if (formData.password.length < 6) {
+      showToast('Password must be at least 6 characters');
       return;
     }
 
-    addStaff(formData);
-    showToast(`Added ${formData.name} to ${currentStore.name} team`);
-    setIsAddModalOpen(false);
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      role: 'Staff',
-      scope: 'Order Packing & Counter Bay',
-    });
+    try {
+      setIsSubmitting(true);
+      await addStaff(formData);
+      showToast(`Added ${formData.name} to ${currentStore.name} team. Staff can log in at /login.`);
+      setIsAddModalOpen(false);
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        password: '',
+        role: 'Staff',
+        scope: 'Order Packing & Counter Bay',
+      });
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Failed to add staff member');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleConfirmDelete = () => {
@@ -709,6 +724,31 @@ export default function BusinessStaffPage() {
 
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '600', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                  Initial Login Password *
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Min 6 characters (e.g. Staff@123)"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    fontSize: '13px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <span style={{ fontSize: '11px', color: '#64748B', marginTop: '4px', display: 'block' }}>
+                  Securely hashed with bcrypt. The staff member uses this to log in at /login.
+                </span>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '600', color: '#334155', display: 'block', marginBottom: '4px' }}>
                   Operational Responsibilities / Department
                 </label>
                 <input
@@ -746,6 +786,7 @@ export default function BusinessStaffPage() {
                 </button>
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   style={{
                     padding: '8px 18px',
                     borderRadius: '6px',
@@ -754,11 +795,13 @@ export default function BusinessStaffPage() {
                     color: '#FFFFFF',
                     fontSize: '13px',
                     fontWeight: '600',
-                    cursor: 'pointer',
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting ? 0.7 : 1,
                   }}
                 >
-                  Save Team Member
+                  {isSubmitting ? 'Saving...' : 'Save Team Member'}
                 </button>
+
               </div>
             </form>
           </div>

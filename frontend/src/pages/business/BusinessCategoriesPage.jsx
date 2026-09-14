@@ -52,31 +52,36 @@ export default function BusinessCategoriesPage() {
     setIsModalOpen(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!categoryName.trim()) {
       setValidationError('Category name is required');
       return;
     }
 
-    if (editingCategory) {
-      updateCategory(editingCategory.id, {
-        name: categoryName.trim(),
-        icon: categoryIcon,
-        status: categoryStatus,
-      });
-      setFeedback(`Category "${categoryName}" updated successfully!`);
-    } else {
-      addCategory({
-        name: categoryName.trim(),
-        icon: categoryIcon,
-        status: categoryStatus,
-      });
-      setFeedback(`Category "${categoryName}" added to catalog!`);
-    }
+    try {
+      if (editingCategory) {
+        await updateCategory(editingCategory.id, {
+          name: categoryName.trim(),
+          icon: categoryIcon,
+          status: categoryStatus,
+        });
+        setFeedback(`Category "${categoryName}" updated successfully!`);
+      } else {
+        await addCategory({
+          name: categoryName.trim(),
+          icon: categoryIcon,
+          status: categoryStatus,
+        });
+        setFeedback(`Category "${categoryName}" added to catalog!`);
+      }
 
-    setIsModalOpen(false);
-    setTimeout(() => setFeedback(''), 3000);
+      setIsModalOpen(false);
+      setTimeout(() => setFeedback(''), 3000);
+    } catch (err) {
+      console.error('Category save error:', err);
+      setValidationError(err.message || 'Failed to save category.');
+    }
   };
 
   const handleConfirmDelete = () => {

@@ -314,6 +314,38 @@ export default function DeliveryDetailsPage() {
               </button>
             )}
 
+            {!isDelivered && order.status === 'READY' && (
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await updateOrderStatus(order.id, 'OUT_FOR_DELIVERY');
+                    alert(`Order #${order.orderNumber || order.id} is now Out for Delivery!`);
+                  } catch (err) {
+                    alert(err.response?.data?.message || err.message || 'Failed to start delivery');
+                  }
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 18px',
+                  borderRadius: '6px',
+                  backgroundColor: '#F59E0B',
+                  color: '#0F172A',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                  local_shipping
+                </span>
+                <span>Start Delivery</span>
+              </button>
+            )}
+
             {!isDelivered ? (
               <button
                 type="button"
@@ -321,6 +353,7 @@ export default function DeliveryDetailsPage() {
                   document.getElementById('handover-section')?.scrollIntoView({ behavior: 'smooth' });
                   otpRef1.current?.focus();
                 }}
+
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',

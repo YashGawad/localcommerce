@@ -1,61 +1,119 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getStoreBySlug } from '../../data/stores';
-import { GLOBAL_PRODUCTS, STORE_LISTINGS } from '../../data/products';
+import storeService from '../../services/storeService';
+import categoryService from '../../services/categoryService';
+import productService from '../../services/productService';
 import ProductCard from '../../components/customer/ProductCard';
 import Badge from '../../components/shared/Badge';
 import Button from '../../components/shared/Button';
 
 /**
  * Screen 3: Customer Store Page
- * Visual Source of Truth: Stitch screen 'LocalCommerce Store - Shree Kirana' (e6971e8ca6c74d37970c7d392be0fc44)
+ * Connects to real store endpoint GET /api/stores/slug/:slug and store products
  */
 export default function StorePage() {
   const { slug } = useParams();
-  const store = getStoreBySlug(slug);
+
+  const [store, setStore] = useState(null);
+  const [storeProducts, setStoreProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('all');
   const [storeSearchQuery, setStoreSearchQuery] = useState('');
   const [cartAlert, setCartAlert] = useState(null);
 
-  // Get listings specific to this store
-  const storeCatalogItems = STORE_LISTINGS[store.id] || [];
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadStoreAndCatalog() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 1. Fetch store by slug
+        const loadedStore = await storeService.getStoreBySlug(slug);
+        if (!loadedStore) {
+          throw new Error('Store not found');
+        }
+
+        // 2. Fetch categories and store products in parallel
+        const [cats, prods] = await Promise.all([
+          categoryService.getCategories(loadedStore.id).catch(() => []),
+          productService.getStoreProducts(loadedStore.id).catch(() => []),
+        ]);
+
+        if (isMounted) {
+          setStore(loadedStore);
+          setCategories(cats);
+          setStoreProducts(prods);
+        }
+      } catch (err) {
+        console.error(`Error loading store ${slug}:`, err);
+        if (isMounted) {
+          setError(err.message || 'Store not found');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadStoreAndCatalog();
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '1280px', margin: '60px auto', padding: '0 16px', textAlign: 'center', color: '#64748B' }}>
+        <div style={{ display: 'inline-block', width: '36px', height: '36px', border: '3px solid #E2E8F0', borderTopColor: '#2563EB', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <div style={{ marginTop: '16px', fontSize: '15px', fontWeight: 600 }}>Loading Storefront...</div>
+      </div>
+    );
+  }
+
+  if (error || !store) {
+    return (
+      <div style={{ maxWidth: '800px', margin: '60px auto', padding: '32px 16px', textAlign: 'center' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#94A3B8' }}>
+          storefront
+        </span>
+        <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#172033', marginTop: '12px' }}>
+          Store Not Found
+        </h2>
+        <p style={{ color: '#64748B', marginTop: '6px', fontSize: '14px' }}>
+          The merchant you are looking for ({slug}) does not exist or may be temporarily unavailable.
+        </p>
+        <Link to="/" style={{ marginTop: '20px', display: 'inline-block' }}>
+          <Button variant="primary">Return to Stores</Button>
+        </Link>
+      </div>
+    );
+  }
 
   // Filter catalog by selected category & in-store search
-  const filteredProducts = storeCatalogItems
-    .map((item) => {
-      const globalProd = GLOBAL_PRODUCTS.find((p) => p.id === item.productId);
-      if (!globalProd) return null;
-      return {
-        product: globalProd,
-        storePrice: item.storePrice,
-        mrp: item.mrp,
-        availability: item.availability,
-        isRecommended: item.isRecommended,
-      };
-    })
-    .filter(Boolean)
+  const filteredProducts = storeProducts
     .filter((entry) => {
       // In-store search
       if (storeSearchQuery.trim()) {
         const q = storeSearchQuery.toLowerCase();
         const matches =
-          entry.product.title.toLowerCase().includes(q) ||
-          entry.product.brand.toLowerCase().includes(q);
+          (entry.title || entry.name || '').toLowerCase().includes(q) ||
+          (entry.brand || '').toLowerCase().includes(q);
         if (!matches) return false;
       }
       // Category filter
       if (activeCategoryFilter === 'all') return true;
-      if (activeCategoryFilter === 'dairy' && entry.product.category === 'bakery-dairy') return true;
-      if (activeCategoryFilter === 'staples' && entry.product.category === 'groceries') return true;
-      if (activeCategoryFilter === 'beverages' && entry.product.category === 'beverages') return true;
-      return false;
+      return entry.categoryId === activeCategoryFilter || entry.category === activeCategoryFilter;
     });
 
   const handleAddToCart = (product, storeInfo, qty) => {
-    // ONE CART = ONE STORE architecture demonstration
     setCartAlert({
-      productName: product.title,
+      productName: product.title || product.name,
       storeName: store.name,
       qty,
     });
@@ -148,102 +206,74 @@ export default function StorePage() {
                 {store.category} • {store.address}
               </p>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '10px', fontSize: '12px', color: '#475569' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#64748B' }}>schedule</span>
-                  {store.hours || '8:00 AM – 10:30 PM (Daily)'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '16px', flexWrap: 'wrap', fontSize: '13px', color: '#172033' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#2563EB' }}>electric_moped</span>
+                  <strong>{store.deliveryTime}</strong> delivery
                 </span>
                 <span>•</span>
-                <span>Owner: <strong>{store.ownerName}</strong></span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#10B981' }}>storefront</span>
+                  In-Store Pickup ready in 15 mins
+                </span>
+                <span>•</span>
+                <span style={{ color: '#64748B' }}>
+                  Min order: ₹{store.minOrder}
+                </span>
               </div>
             </div>
-          </div>
 
-          {/* Fulfillment Badges Row */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: '12px',
-              marginTop: '20px',
-              paddingTop: '16px',
-              borderTop: '1px solid #F1F5F9',
-            }}
-          >
-            <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#2563EB', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
-                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>electric_moped</span>
-                Fast Delivery
+            {/* Direct Merchant Badge */}
+            <div
+              style={{
+                backgroundColor: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                fontSize: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10B981', fontWeight: 600 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>verified</span>
+                Verified Merchant
               </div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#172033', marginTop: '4px' }}>
-                {store.deliveryTime}
-              </div>
-              <div style={{ fontSize: '11px', color: '#64748B' }}>By dedicated store rider</div>
-            </div>
-
-            <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#172554', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
-                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>storefront</span>
-                Self Pickup
-              </div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#172033', marginTop: '4px' }}>
-                {store.pickupTime || '15 mins'}
-              </div>
-              <div style={{ fontSize: '11px', color: '#64748B' }}>Ready at checkout counter</div>
-            </div>
-
-            <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#065F46', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
-                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>shopping_bag</span>
-                Order Limits
-              </div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#172033', marginTop: '4px' }}>
-                Min ₹{store.minOrder}
-              </div>
-              <div style={{ fontSize: '11px', color: '#10B981', fontWeight: 600 }}>Free delivery over ₹{store.freeDeliveryAbove}</div>
-            </div>
-
-            <div style={{ backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#D97706', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
-                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>sell</span>
-                Pricing Policy
-              </div>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#172033', marginTop: '4px' }}>
-                Store Counter Rates
-              </div>
-              <div style={{ fontSize: '11px', color: '#64748B' }}>No third-party inflation</div>
+              <span style={{ color: '#64748B' }}>Prices set directly by store</span>
+              <span style={{ color: '#2563EB', fontWeight: 500 }}>Fulfillment direct to customer</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Cart Feedback Notification */}
+      {/* Cart Notification Bar (One Cart = One Store feedback) */}
       {cartAlert && (
         <div
           style={{
-            backgroundColor: '#172554',
-            color: '#FFFFFF',
+            backgroundColor: '#EFF6FF',
+            border: '1px solid #BFDBFE',
             borderRadius: '8px',
-            padding: '12px 18px',
+            padding: '12px 20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            boxShadow: '0 4px 12px rgba(23, 37, 84, 0.15)',
+            color: '#1E40AF',
+            fontSize: '13px',
+            fontWeight: 500,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span className="material-symbols-outlined" style={{ color: '#10B981' }}>check_circle</span>
-            <span style={{ fontSize: '13px' }}>
-              Added <strong>{cartAlert.productName}</strong> to your {cartAlert.storeName} cart.
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>shopping_cart</span>
+            Added <strong>{cartAlert.productName}</strong> ({cartAlert.qty}x) from <strong>{cartAlert.storeName}</strong>
           </div>
-          <Link to="/cart" style={{ color: '#93C5FD', fontWeight: 700, fontSize: '13px', textDecoration: 'underline' }}>
-            View Cart
+          <Link to="/cart" style={{ color: '#2563EB', fontWeight: 700, textDecoration: 'none' }}>
+            View Cart →
           </Link>
         </div>
       )}
 
-      {/* 2. Store Search and Aisle Shelf (Sticky) */}
+      {/* 2. In-Store Discovery Toolbar & Department Category Filter */}
       <section
         style={{
           backgroundColor: '#FFFFFF',
@@ -304,87 +334,80 @@ export default function StorePage() {
                 transition: 'all 0.15s ease',
               }}
             >
-              All Items ({storeCatalogItems.length})
+              All Items ({storeProducts.length})
             </button>
-            <button
-              onClick={() => setActiveCategoryFilter('dairy')}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: 600,
-                backgroundColor: activeCategoryFilter === 'dairy' ? '#172554' : '#F1F5F9',
-                color: activeCategoryFilter === 'dairy' ? '#FFFFFF' : '#475569',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              Dairy &amp; Bakery
-            </button>
-            <button
-              onClick={() => setActiveCategoryFilter('staples')}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: 600,
-                backgroundColor: activeCategoryFilter === 'staples' ? '#172554' : '#F1F5F9',
-                color: activeCategoryFilter === 'staples' ? '#FFFFFF' : '#475569',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              Atta, Dal &amp; Staples
-            </button>
-            <button
-              onClick={() => setActiveCategoryFilter('beverages')}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: 600,
-                backgroundColor: activeCategoryFilter === 'beverages' ? '#172554' : '#F1F5F9',
-                color: activeCategoryFilter === 'beverages' ? '#FFFFFF' : '#475569',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              Beverages &amp; Cold Drinks
-            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategoryFilter(cat.id)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  backgroundColor: activeCategoryFilter === cat.id ? '#172554' : '#F1F5F9',
+                  color: activeCategoryFilter === cat.id ? '#FFFFFF' : '#475569',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {cat.name}
+              </button>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* 3. Store Product Catalog Grid */}
+      {/* 3. Catalog Products Grid */}
       <section>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
           <div>
             <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#172033' }}>
               Store Catalog ({filteredProducts.length} items)
             </h2>
-            <p style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-              Prices and stock verified for direct fulfillment by {store.name}
+            <p style={{ fontSize: '12px', color: '#64748B' }}>
+              Inventory and prices updated live by {store.name}
             </p>
           </div>
         </div>
 
         {filteredProducts.length === 0 ? (
-          <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '36px', textAlign: 'center' }}>
-            <p style={{ color: '#64748B', fontSize: '14px' }}>No items match your selected filter in this store.</p>
-            <Button variant="outline" size="sm" onClick={() => { setActiveCategoryFilter('all'); setStoreSearchQuery(''); }} style={{ marginTop: '12px' }}>
-              Reset Filters
-            </Button>
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              borderRadius: '8px',
+              padding: '48px 16px',
+              textAlign: 'center',
+              color: '#64748B',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '40px', color: '#94A3B8' }}>
+              production_quantity_limits
+            </span>
+            <div style={{ marginTop: '8px', fontSize: '15px', fontWeight: 600, color: '#172033' }}>
+              No products found
+            </div>
+            <div style={{ fontSize: '13px', marginTop: '4px' }}>
+              {storeSearchQuery ? `No items matching "${storeSearchQuery}"` : 'This store has not added items to this department yet.'}
+            </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
-            {filteredProducts.map((entry) => (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+              gap: '16px',
+            }}
+          >
+            {filteredProducts.map((item) => (
               <ProductCard
-                key={entry.product.id}
-                product={entry.product}
+                key={item.id}
+                product={item}
                 store={store}
-                storePrice={entry.storePrice}
-                mrp={entry.mrp}
-                availability={entry.availability}
+                storePrice={item.price}
+                mrp={item.mrp}
+                availability={item.availability}
                 onAddToCart={handleAddToCart}
               />
             ))}

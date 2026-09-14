@@ -1,39 +1,61 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { MOCK_ORDERS } from '../../data/orders';
+import orderService from '../../services/orderService';
+import { useAuth } from '../../context/AuthContext';
 
 /**
  * Screen 5 — Customer My Orders (/orders)
- * Shows PLATFORM-WIDE customer order history across multiple stores.
+ * Shows authenticated customer order history across stores.
  * Supports status tabs (All, Active Delivery, Delivered, Cancelled) and detailed order cards.
  */
 export default function MyOrdersPage() {
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'active' | 'delivered' | 'cancelled'
+  const [allOrders, setAllOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Combine localStorage placed orders with MOCK_ORDERS for complete history
-  const allOrders = useMemo(() => {
-    try {
-      const local = JSON.parse(localStorage.getItem('localcommerce_orders') || '[]');
-      // Merge unique by ID
-      const map = new Map();
-      local.forEach((o) => map.set(o.id, o));
-      MOCK_ORDERS.forEach((o) => {
-        if (!map.has(o.id)) map.set(o.id, o);
-      });
-      return Array.from(map.values());
-    } catch {
-      return MOCK_ORDERS;
+  useEffect(() => {
+    let isMounted = true;
+    async function loadOrders() {
+      if (!token) {
+        if (isMounted) setLoading(false);
+        return;
+      }
+      try {
+        const orders = await orderService.getOrders();
+        if (isMounted) {
+          setAllOrders(orders);
+          setError(null);
+        }
+      } catch (err) {
+        console.error('Failed to load customer orders:', err);
+        if (isMounted) setError(err.message || 'Failed to retrieve orders.');
+      } finally {
+        if (isMounted) setLoading(false);
+      }
     }
-  }, []);
+
+    loadOrders();
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
 
   const filteredOrders = useMemo(() => {
     if (activeTab === 'active') {
       return allOrders.filter(
-        (o) => o.status === 'OUT_FOR_DELIVERY' || o.status === 'ASSIGNED' || o.status === 'READY'
+        (o) =>
+          o.status === 'PLACED' ||
+          o.status === 'CONFIRMED' ||
+          o.status === 'PREPARING' ||
+          o.status === 'READY' ||
+          o.status === 'READY_FOR_PICKUP' ||
+          o.status === 'OUT_FOR_DELIVERY'
       );
     }
     if (activeTab === 'delivered') {
-      return allOrders.filter((o) => o.status === 'DELIVERED');
+      return allOrders.filter((o) => o.status === 'DELIVERED' || o.status === 'PICKED_UP');
     }
     if (activeTab === 'cancelled') {
       return allOrders.filter((o) => o.status === 'CANCELLED');
@@ -42,9 +64,15 @@ export default function MyOrdersPage() {
   }, [allOrders, activeTab]);
 
   const activeCount = allOrders.filter(
-    (o) => o.status === 'OUT_FOR_DELIVERY' || o.status === 'ASSIGNED' || o.status === 'READY'
+    (o) =>
+      o.status === 'PLACED' ||
+      o.status === 'CONFIRMED' ||
+      o.status === 'PREPARING' ||
+      o.status === 'READY' ||
+      o.status === 'READY_FOR_PICKUP' ||
+      o.status === 'OUT_FOR_DELIVERY'
   ).length;
-  const deliveredCount = allOrders.filter((o) => o.status === 'DELIVERED').length;
+  const deliveredCount = allOrders.filter((o) => o.status === 'DELIVERED' || o.status === 'PICKED_UP').length;
   const cancelledCount = allOrders.filter((o) => o.status === 'CANCELLED').length;
 
   return (
@@ -199,8 +227,16 @@ export default function MyOrdersPage() {
         </button>
       </div>
 
-      {/* Orders List / Empty State */}
-      {filteredOrders.length === 0 ? (
+      {/* Orders List / Loading / Error / Empty State */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '64px 0', color: '#64748B' }}>
+          <p style={{ fontSize: '15px' }}>Loading your orders...</p>
+        </div>
+      ) : error ? (
+        <div style={{ textAlign: 'center', padding: '32px 16px', color: '#DC2626', backgroundColor: '#FEF2F2', borderRadius: '8px', marginBottom: '24px' }}>
+          <p>{error}</p>
+        </div>
+      ) : filteredOrders.length === 0 ? (
         <div
           style={{
             backgroundColor: '#FFFFFF',

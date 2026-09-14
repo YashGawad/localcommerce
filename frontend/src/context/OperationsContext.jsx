@@ -1,7 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { useCatalog } from './CatalogContext';
 import { MOCK_STAFF } from '../data/staff';
+import orderService from '../services/orderService';
+import staffService from '../services/staffService';
+import deliveryService from '../services/deliveryService';
 
 /**
  * Standard Order Lifecycle Statuses:
@@ -807,17 +810,133 @@ const INITIAL_CUSTOMER_METRICS = {
 
 const OperationsContext = createContext(null);
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUUID = (id) => typeof id === 'string' && UUID_REGEX.test(id);
+
 export function OperationsProvider({ children }) {
   const { currentStore } = useCatalog();
 
   // Multi-store orders state
   const [ordersMap, setOrdersMap] = useState(INITIAL_STORE_ORDERS);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState(null);
 
   // Store-specific customer relationship metadata (notes, tags)
   const [customerMeta, setCustomerMeta] = useState(INITIAL_CUSTOMER_METRICS);
 
   // Store staff list
   const [staffList, setStaffList] = useState(MOCK_STAFF);
+
+  const currentStoreId = currentStore?.id;
+
+  // Fetch live store orders if current store is a backend UUID
+  const refreshOrders = useCallback(async () => {
+    if (!currentStoreId || !isUUID(currentStoreId)) return;
+    try {
+      const liveOrders = await orderService.getOrders({ store_id: currentStoreId });
+      if (Array.isArray(liveOrders)) {
+        setOrdersMap((prev) => ({
+          ...prev,
+          [currentStoreId]: liveOrders,
+        }));
+        setOrdersError(null);
+      }
+    } catch (err) {
+      console.warn('Could not load live store orders:', err.message);
+      setOrdersError(err.message);
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, [currentStoreId]);
+
+  // Fetch live store staff if current store is a backend UUID
+  const refreshStaff = useCallback(async () => {
+    if (!currentStoreId || !isUUID(currentStoreId)) return;
+    try {
+      const liveStaff = await staffService.getStoreStaff(currentStoreId);
+      if (Array.isArray(liveStaff)) {
+        const mapped = liveStaff.map((s) => ({
+          id: s.id,
+          userId: s.user_id,
+          storeId: s.store_id,
+          name: s.name,
+          email: s.email,
+          phone: s.phone || '',
+          role: s.role === 'delivery_staff' ? 'Delivery Staff' : s.role === 'manager' ? 'Manager' : s.role === 'owner' ? 'Owner' : 'Staff',
+          rawRole: s.role,
+          roleLabel: s.role === 'delivery_staff' ? 'Delivery Associate' : s.role === 'manager' ? 'Store Manager' : s.role === 'owner' ? 'Store Owner' : 'Staff Associate',
+          status: s.status === 'active' ? 'Active' : 'Inactive',
+          scope: s.role === 'delivery_staff' ? 'Local Delivery Fleet & Order Dispatch' : s.role === 'manager' ? 'Catalog, Orders, Inventory, Staff' : 'Store Floor Operations',
+          avatar: (s.name || 'S').split(' ').filter(Boolean).map((p) => p[0]).join('').toUpperCase().slice(0, 2),
+          joinedDate: s.created_at ? new Date(s.created_at).toLocaleDateString() : 'Active',
+          deliveriesCount: 0,
+        }));
+        setStaffList((prev) => {
+          const others = prev.filter((item) => item.storeId !== currentStoreId);
+          return [...mapped, ...others];
+        });
+      }
+    } catch (err) {
+      console.warn('Could not load live store staff:', err.message);
+    }
+  }, [currentStoreId]);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function load() {
+      if (!currentStoreId || !isUUID(currentStoreId)) return;
+      try {
+        const [liveOrders, liveStaff] = await Promise.all([
+          orderService.getOrders({ store_id: currentStoreId }).catch((err) => {
+            console.warn('Could not load live store orders:', err.message);
+            return null;
+          }),
+          staffService.getStoreStaff(currentStoreId).catch((err) => {
+            console.warn('Could not load live store staff:', err.message);
+            return null;
+          }),
+        ]);
+
+        if (isMounted) {
+          if (Array.isArray(liveOrders)) {
+            setOrdersMap((prev) => ({
+              ...prev,
+              [currentStoreId]: liveOrders,
+            }));
+            setOrdersError(null);
+          }
+          if (Array.isArray(liveStaff)) {
+            const mapped = liveStaff.map((s) => ({
+              id: s.id,
+              userId: s.user_id,
+              storeId: s.store_id,
+              name: s.name,
+              email: s.email,
+              phone: s.phone || '',
+              role: s.role === 'delivery_staff' ? 'Delivery Staff' : s.role === 'manager' ? 'Manager' : s.role === 'owner' ? 'Owner' : 'Staff',
+              rawRole: s.role,
+              roleLabel: s.role === 'delivery_staff' ? 'Delivery Associate' : s.role === 'manager' ? 'Store Manager' : s.role === 'owner' ? 'Store Owner' : 'Staff Associate',
+              status: s.status === 'active' ? 'Active' : 'Inactive',
+              scope: s.role === 'delivery_staff' ? 'Local Delivery Fleet & Order Dispatch' : s.role === 'manager' ? 'Catalog, Orders, Inventory, Staff' : 'Store Floor Operations',
+              avatar: (s.name || 'S').split(' ').filter(Boolean).map((p) => p[0]).join('').toUpperCase().slice(0, 2),
+              joinedDate: s.created_at ? new Date(s.created_at).toLocaleDateString() : 'Active',
+              deliveriesCount: 0,
+            }));
+            setStaffList((prev) => {
+              const others = prev.filter((item) => item.storeId !== currentStoreId);
+              return [...mapped, ...others];
+            });
+          }
+        }
+      } finally {
+        if (isMounted) setOrdersLoading(false);
+      }
+    }
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [currentStoreId]);
 
   // Active store's orders
   const storeOrders = useMemo(() => {
@@ -864,7 +983,33 @@ export function OperationsProvider({ children }) {
   /**
    * Transition order status forward
    */
-  const updateOrderStatus = (orderId, nextStatus, extra = {}, targetStoreId = null) => {
+  const updateOrderStatus = async (orderId, nextStatus, extra = {}, targetStoreId = null) => {
+    // If order is a backend UUID, invoke real backend endpoint
+    if (isUUID(orderId)) {
+      try {
+        const updated = await orderService.updateOrderStatus(orderId, nextStatus);
+        setOrdersMap((prev) => {
+          const resolvedStoreId = targetStoreId || currentStore.id;
+          const storeList = prev[resolvedStoreId] || [];
+          const updatedList = storeList.map((order) => {
+            if (order.id === orderId) {
+              return { ...order, ...updated, ...extra };
+            }
+            return order;
+          });
+          return {
+            ...prev,
+            [resolvedStoreId]: updatedList,
+          };
+        });
+        return updated;
+      } catch (err) {
+        console.error('Failed to update status on server:', err);
+        throw err;
+      }
+    }
+
+    // In-memory transition for mock/demo orders
     setOrdersMap((prev) => {
       // Find the store that holds this order
       let resolvedStoreId = targetStoreId || currentStore.id;
@@ -960,7 +1105,14 @@ export function OperationsProvider({ children }) {
   /**
    * Assign Delivery Partner to an Order
    */
-  const assignRider = (orderId, riderData) => {
+  const assignRider = async (orderId, riderData) => {
+    if (isUUID(orderId)) {
+      const riderUserId = riderData.userId || riderData.id;
+      const res = await deliveryService.assignDeliveryStaff(orderId, riderUserId);
+      await refreshOrders();
+      return res;
+    }
+
     updateOrderStatus(orderId, 'OUT_FOR_DELIVERY', {
       deliveryPartner: riderData,
     });
@@ -969,7 +1121,30 @@ export function OperationsProvider({ children }) {
   /**
    * Cancel an order with reason
    */
-  const cancelOrder = (orderId, reason) => {
+  const cancelOrder = async (orderId, reason) => {
+    if (isUUID(orderId)) {
+      try {
+        const updated = await orderService.updateOrderStatus(orderId, 'CANCELLED');
+        setOrdersMap((prev) => {
+          const storeList = prev[currentStore.id] || [];
+          const updatedList = storeList.map((order) => {
+            if (order.id === orderId) {
+              return { ...order, ...updated, cancelReason: reason };
+            }
+            return order;
+          });
+          return {
+            ...prev,
+            [currentStore.id]: updatedList,
+          };
+        });
+        return updated;
+      } catch (err) {
+        console.error('Failed to cancel order on server:', err);
+        throw err;
+      }
+    }
+
     setOrdersMap((prev) => {
       const storeList = prev[currentStore.id] || [];
       const updatedList = storeList.map((order) => {
@@ -1043,10 +1218,31 @@ export function OperationsProvider({ children }) {
   /**
    * Staff Operations (Add, Update, Toggle, Remove)
    */
-  const addStaff = (staffData) => {
+  const addStaff = async (staffData) => {
+    if (currentStoreId && isUUID(currentStoreId)) {
+      const roleMapping =
+        staffData.role === 'Delivery Staff' || staffData.role === 'delivery_staff'
+          ? 'delivery_staff'
+          : staffData.role === 'Manager' || staffData.role === 'manager'
+          ? 'manager'
+          : 'staff';
+
+      const payload = {
+        name: staffData.name,
+        email: staffData.email,
+        phone: staffData.phone || '',
+        role: roleMapping,
+        password: staffData.password,
+      };
+
+      const res = await staffService.addStoreStaff(currentStoreId, payload);
+      await refreshStaff();
+      return res;
+    }
+
     const newStaff = {
       id: `staff_${Date.now()}`,
-      storeId: currentStore.id,
+      storeId: currentStore?.id,
       name: staffData.name,
       email: staffData.email,
       phone: staffData.phone,
@@ -1101,6 +1297,9 @@ export function OperationsProvider({ children }) {
 
   const value = {
     ordersMap,
+    ordersLoading,
+    ordersError,
+    refreshOrders,
     staffList,
     storeOrders,
     updateOrderStatus,
@@ -1110,6 +1309,7 @@ export function OperationsProvider({ children }) {
     addCustomerNote,
     addCustomerTag,
     storeStaff,
+    refreshStaff,
     addStaff,
     updateStaff,
     toggleStaffStatus,

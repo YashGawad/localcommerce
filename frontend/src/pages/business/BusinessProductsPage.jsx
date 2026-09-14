@@ -5,7 +5,14 @@ import Button from '../../components/shared/Button';
 import { useCatalog } from '../../context/CatalogContext';
 
 export default function BusinessProductsPage() {
-  const { currentStore, storeProducts, categories, calculateStockStatus } = useCatalog();
+  const {
+    currentStore,
+    storeProducts,
+    categories,
+    calculateStockStatus,
+    loadingCatalog,
+    catalogError,
+  } = useCatalog();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -407,7 +414,28 @@ export default function BusinessProductsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.length === 0 ? (
+              {loadingCatalog ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: '48px 16px', textAlign: 'center', color: '#64748B' }}>
+                    <div style={{ display: 'inline-block', width: '28px', height: '28px', border: '3px solid #E2E8F0', borderTopColor: '#2563EB', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    <div style={{ marginTop: '12px', fontSize: '14px', fontWeight: 500 }}>Loading products...</div>
+                  </td>
+                </tr>
+              ) : catalogError ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: '48px 16px', textAlign: 'center', color: '#DC2626' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '36px', color: '#DC2626' }}>
+                      error
+                    </span>
+                    <div style={{ marginTop: '8px', fontSize: '15px', fontWeight: 600 }}>
+                      Failed to load products
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#64748B', marginTop: '4px' }}>
+                      {catalogError}
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredProducts.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ padding: '48px 16px', textAlign: 'center', color: '#64748B' }}>
                     <span className="material-symbols-outlined" style={{ fontSize: '40px', color: '#94A3B8' }}>

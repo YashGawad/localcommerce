@@ -204,8 +204,12 @@ const createStore = async (req, res) => {
     });
   }
 
+  const client = await pool.connect();
+
   try {
-    const result = await pool.query(
+    await client.query('BEGIN');
+
+    const result = await client.query(
       `
       INSERT INTO stores (
         name, slug, description, phone, email,
@@ -235,11 +239,42 @@ const createStore = async (req, res) => {
       ]
     );
 
+    const newStore = result.rows[0];
+
+    // If authenticated user created the store, automatically link them in store_users as 'owner'
+    if (req.user && req.user.id) {
+      await client.query(
+        `
+        INSERT INTO store_users (store_id, user_id, role)
+        VALUES ($1, $2, 'owner')
+        ON CONFLICT (store_id, user_id) DO UPDATE SET role = 'owner';
+        `,
+        [newStore.id, req.user.id]
+      );
+    }
+
+    // Initialize default store_settings
+    await client.query(
+      `
+      INSERT INTO store_settings (
+        store_id, is_online, accepting_orders, pickup_enabled, delivery_enabled, delivery_base_fee, minimum_order_amount
+      ) VALUES (
+        $1, true, true, true, true, 0, 0
+      )
+      ON CONFLICT (store_id) DO NOTHING;
+      `,
+      [newStore.id]
+    );
+
+    await client.query('COMMIT');
+
     return res.status(201).json({
       success: true,
-      data: result.rows[0],
+      data: newStore,
     });
   } catch (error) {
+    await client.query('ROLLBACK');
+
     // Unique violation on slug
     if (error.code === '23505') {
       return res.status(409).json({
@@ -253,6 +288,8 @@ const createStore = async (req, res) => {
       success: false,
       message: 'Failed to create store',
     });
+  } finally {
+    client.release();
   }
 };
 

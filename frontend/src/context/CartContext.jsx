@@ -1,61 +1,69 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useMemo } from 'react';
-import { MOCK_STORES } from '../data/stores';
-import { GLOBAL_PRODUCTS } from '../data/products';
+import { createContext, useContext, useState, useMemo, useCallback } from 'react';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext(null);
 
-// Initial demo items matching the Stitch Customer Cart design
-const getInitialDemoCart = () => {
-  const shreeKirana = MOCK_STORES.find((s) => s.id === 'store_02') || MOCK_STORES[1];
-  const amulMilk = GLOBAL_PRODUCTS.find((p) => p.id === 'prod_amul_taaza');
-  const tataSalt = GLOBAL_PRODUCTS.find((p) => p.id === 'prod_tata_salt');
-  const brownBread = GLOBAL_PRODUCTS.find((p) => p.id === 'prod_brown_bread');
+const getCartStorageKey = (userId) => {
+  return userId ? `localcommerce_cart_${userId}` : 'localcommerce_cart_guest';
+};
 
+const getInitialCart = () => {
   return {
-    store: shreeKirana,
-    storeId: shreeKirana?.id || 'store_02',
-    items: [
-      {
-        id: 'cart_item_1',
-        productId: amulMilk?.id || 'prod_amul_taaza',
-        title: amulMilk?.title || 'Amul Taaza Toned Milk',
-        variant: '1 Litre Pouch',
-        price: 54,
-        mrp: 56,
-        quantity: 1,
-        image: amulMilk?.image,
-        availability: 'In Stock',
-      },
-      {
-        id: 'cart_item_2',
-        productId: tataSalt?.id || 'prod_tata_salt',
-        title: tataSalt?.title || 'Tata Salt Iodized',
-        variant: '1 kg Re-sealable Pouch',
-        price: 26,
-        mrp: 28,
-        quantity: 2,
-        image: tataSalt?.image,
-        availability: 'In Stock',
-      },
-      {
-        id: 'cart_item_3',
-        productId: brownBread?.id || 'prod_brown_bread',
-        title: brownBread?.title || 'Britannia Whole Wheat Bread',
-        variant: '400 g Loaf',
-        price: 50,
-        mrp: 50,
-        quantity: 1,
-        image: brownBread?.image,
-        availability: 'Fresh Today',
-      },
-    ],
+    store: null,
+    storeId: null,
+    items: [],
   };
 };
 
+const loadCartFromStorage = (userId) => {
+  if (typeof localStorage === 'undefined') return getInitialCart();
+  try {
+    const key = getCartStorageKey(userId);
+    const raw = localStorage.getItem(key);
+    if (!raw) return getInitialCart();
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.items)) {
+      return parsed;
+    }
+  } catch (err) {
+    console.warn('Failed to load cart from localStorage:', err);
+  }
+  return getInitialCart();
+};
+
 export function CartProvider({ children }) {
-  const [cart, setCart] = useState(() => getInitialDemoCart());
+  const { currentUser } = useAuth();
+  const currentUserId = currentUser?.id || null;
+
+  const [cart, setCart] = useState(() => loadCartFromStorage(currentUserId));
+  const [prevUserId, setPrevUserId] = useState(currentUserId);
   const [storeConflict, setStoreConflict] = useState(null);
+
+  // Isolate cart by customer: when active customer changes, switch to that customer's cart
+  if (prevUserId !== currentUserId) {
+    setPrevUserId(currentUserId);
+    setCart(loadCartFromStorage(currentUserId));
+  }
+
+  // Customer-isolated persistence updater
+  const updateCartState = useCallback(
+    (updater) => {
+      setCart((prev) => {
+        const nextCart = typeof updater === 'function' ? updater(prev) : updater;
+        if (typeof localStorage !== 'undefined') {
+          try {
+            const key = getCartStorageKey(currentUserId);
+            localStorage.setItem(key, JSON.stringify(nextCart));
+          } catch (err) {
+            console.warn('Failed to persist customer cart:', err);
+          }
+        }
+        return nextCart;
+      });
+    },
+    [currentUserId]
+  );
 
   /**
    * Add Item with strict ONE CART = ONE STORE validation
@@ -75,13 +83,19 @@ export function CartProvider({ children }) {
       return;
     }
 
-    setCart((prev) => {
-      const price = storeListing?.storePrice || product.mrp - 2;
-      const mrp = storeListing?.mrp || product.mrp;
+    const storeProductId =
+      storeListing?.raw?.id ||
+      storeListing?.storeProductId ||
+      product.storeProductId ||
+      product.id;
+
+    updateCartState((prev) => {
+      const price = storeListing?.storePrice || product.price || (product.mrp ? product.mrp - 2 : 50);
+      const mrp = storeListing?.mrp || product.mrp || price;
       const variant = storeListing?.unit || product.unit || '1 unit';
 
       const existingIndex = prev.items.findIndex(
-        (item) => item.productId === product.id && item.variant === variant
+        (item) => item.storeProductId === storeProductId && item.variant === variant
       );
 
       let newItems;
@@ -94,8 +108,9 @@ export function CartProvider({ children }) {
       } else {
         const newItem = {
           id: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          storeProductId,
           productId: product.id,
-          title: product.title,
+          title: product.title || product.name,
           variant,
           price,
           mrp,
@@ -121,18 +136,25 @@ export function CartProvider({ children }) {
     if (!storeConflict) return;
     const { newStore, pendingProduct, pendingListing, pendingQuantity } = storeConflict;
 
-    const price = pendingListing?.storePrice || pendingProduct.mrp - 2;
-    const mrp = pendingListing?.mrp || pendingProduct.mrp;
+    const storeProductId =
+      pendingListing?.raw?.id ||
+      pendingListing?.storeProductId ||
+      pendingProduct.storeProductId ||
+      pendingProduct.id;
+
+    const price = pendingListing?.storePrice || pendingProduct.price || (pendingProduct.mrp ? pendingProduct.mrp - 2 : 50);
+    const mrp = pendingListing?.mrp || pendingProduct.mrp || price;
     const variant = pendingListing?.unit || pendingProduct.unit || '1 unit';
 
-    setCart({
+    updateCartState({
       store: newStore,
       storeId: newStore.id,
       items: [
         {
           id: `cart_${Date.now()}`,
+          storeProductId,
           productId: pendingProduct.id,
-          title: pendingProduct.title,
+          title: pendingProduct.title || pendingProduct.name,
           variant,
           price,
           mrp,
@@ -160,7 +182,7 @@ export function CartProvider({ children }) {
       removeFromCart(itemId);
       return;
     }
-    setCart((prev) => ({
+    updateCartState((prev) => ({
       ...prev,
       items: prev.items.map((item) =>
         item.id === itemId ? { ...item, quantity: newQuantity } : item
@@ -172,7 +194,7 @@ export function CartProvider({ children }) {
    * Remove item from cart
    */
   const removeFromCart = (itemId) => {
-    setCart((prev) => {
+    updateCartState((prev) => {
       const remainingItems = prev.items.filter((item) => item.id !== itemId);
       return {
         ...prev,
@@ -187,7 +209,7 @@ export function CartProvider({ children }) {
    * Clear all items in cart
    */
   const clearCart = () => {
-    setCart({
+    updateCartState({
       store: null,
       storeId: null,
       items: [],

@@ -229,6 +229,232 @@ const login = async (req, res) => {
 };
 
 /**
+ * POST /api/auth/business/register
+ * Transactional onboarding endpoint:
+ * 1. Creates a new business_owner user
+ * 2. Creates the business's initial store
+ * 3. Binds the business_owner in store_users as 'owner'
+ * 4. Initializes default store_settings
+ * 5. Returns JWT and user session for automatic dashboard login
+ */
+const registerBusiness = async (req, res) => {
+  const { name, email, password, phone, store } = req.body;
+
+  // 1. Validate Account Info
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    return res.status(400).json({
+      success: false,
+      message: 'Full name is required and cannot be empty.',
+    });
+  }
+
+  if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email.trim())) {
+    return res.status(400).json({
+      success: false,
+      message: 'A valid email address is required.',
+    });
+  }
+
+  if (!password || typeof password !== 'string' || password.length < 6) {
+    return res.status(400).json({
+      success: false,
+      message: 'Password is required and must be at least 6 characters long.',
+    });
+  }
+
+  // 2. Validate Store Info
+  if (!store || typeof store !== 'object') {
+    return res.status(400).json({
+      success: false,
+      message: 'Store information is required for business onboarding.',
+    });
+  }
+
+  if (!store.name || typeof store.name !== 'string' || store.name.trim() === '') {
+    return res.status(400).json({
+      success: false,
+      message: 'Store name is required and cannot be empty.',
+    });
+  }
+
+  const storeName = store.name.trim();
+
+  // Slug derivation / normalization
+  let rawSlug = store.slug && typeof store.slug === 'string' && store.slug.trim() !== ''
+    ? store.slug.trim().toLowerCase()
+    : storeName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '');
+
+  if (!rawSlug || !/^[a-z0-9-]+$/.test(rawSlug)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Store slug must contain only lowercase letters, numbers, and hyphens.',
+    });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // 3. Pre-check uniqueness before starting transaction
+  const existingUser = await pool.query(
+    'SELECT id FROM users WHERE lower(email) = lower($1)',
+    [normalizedEmail]
+  );
+  if (existingUser.rows.length > 0) {
+    return res.status(409).json({
+      success: false,
+      message: 'An account with this email address already exists.',
+    });
+  }
+
+  const existingStore = await pool.query(
+    'SELECT id FROM stores WHERE lower(slug) = lower($1)',
+    [rawSlug]
+  );
+  if (existingStore.rows.length > 0) {
+    return res.status(409).json({
+      success: false,
+      message: 'A store with this slug already exists. Please choose a different URL slug.',
+    });
+  }
+
+  // 4. Hash password
+  const saltRounds = 10;
+  const passwordHash = await bcrypt.hash(password, saltRounds);
+
+  // 5. Execute atomic transaction
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // A. Insert business_owner user
+    const userRes = await client.query(
+      `
+      INSERT INTO users (
+        name, email, password_hash, role, phone, status
+      ) VALUES (
+        $1, $2, $3, 'business_owner', $4, 'active'
+      )
+      RETURNING id, name, email, role, phone, status, created_at, updated_at;
+      `,
+      [name.trim(), normalizedEmail, passwordHash, phone ? phone.trim() : null]
+    );
+    const newUser = userRes.rows[0];
+
+    // B. Insert store
+    const storeRes = await client.query(
+      `
+      INSERT INTO stores (
+        name, slug, description, phone, email,
+        address, city, state, postal_code, status
+      ) VALUES (
+        $1, $2, $3, $4, $5,
+        $6, $7, $8, $9, 'active'
+      )
+      RETURNING 
+        id, name, slug, description, phone, email,
+        address, city, state, postal_code, latitude, longitude,
+        status, created_at, updated_at;
+      `,
+      [
+        storeName,
+        rawSlug,
+        store.description ? store.description.trim() : null,
+        store.phone ? store.phone.trim() : (phone ? phone.trim() : null),
+        store.email ? store.email.trim().toLowerCase() : normalizedEmail,
+        store.address ? store.address.trim() : null,
+        store.city ? store.city.trim() : null,
+        store.state ? store.state.trim() : 'Maharashtra',
+        store.postal_code ? store.postal_code.trim() : null,
+      ]
+    );
+    const newStore = storeRes.rows[0];
+
+    // C. Bind business_owner as owner in store_users
+    await client.query(
+      `
+      INSERT INTO store_users (
+        store_id, user_id, role
+      ) VALUES (
+        $1, $2, 'owner'
+      );
+      `,
+      [newStore.id, newUser.id]
+    );
+
+    // D. Initialize default store_settings
+    await client.query(
+      `
+      INSERT INTO store_settings (
+        store_id, is_online, accepting_orders, pickup_enabled, delivery_enabled, delivery_base_fee, minimum_order_amount
+      ) VALUES (
+        $1, true, true, true, true, 0, 0
+      );
+      `,
+      [newStore.id]
+    );
+
+    await client.query('COMMIT');
+
+    // 6. Generate JWT token for immediate auto-login
+    const jwtSecret = process.env.JWT_SECRET;
+    const expiresIn = process.env.JWT_EXPIRES_IN || '1d';
+    const token = jwt.sign(
+      { userId: newUser.id },
+      jwtSecret,
+      { expiresIn }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: 'Business account and store onboarded successfully',
+      data: {
+        token,
+        user: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+          phone: newUser.phone,
+          status: newUser.status,
+          store_roles: [
+            {
+              store_id: newStore.id,
+              role: 'owner',
+            },
+          ],
+        },
+        store: newStore,
+      },
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+
+    if (error.code === '23505') {
+      if (error.constraint?.includes('slug') || error.detail?.includes('slug')) {
+        return res.status(409).json({
+          success: false,
+          message: 'A store with this slug already exists.',
+        });
+      }
+      return res.status(409).json({
+        success: false,
+        message: 'An account with this email address already exists.',
+      });
+    }
+
+    console.error('Business onboarding transaction error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Business onboarding failed due to an internal server error.',
+    });
+  } finally {
+    client.release();
+  }
+};
+
+/**
  * GET /api/auth/me
  * Protected endpoint returning the currently authenticated user's profile.
  */
@@ -243,6 +469,8 @@ const getCurrentUser = async (req, res) => {
 
 module.exports = {
   register,
+  registerBusiness,
   login,
   getCurrentUser,
 };
+

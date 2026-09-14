@@ -33,8 +33,10 @@ export default function ProductCard({
     if (onAddToCart) {
       onAddToCart(product, store, 1);
     } else if (cartContext?.addToCart) {
-      const activeStore = store || { id: 'store_02', name: 'Shree Kirana & General Store', slug: 'shree-kirana' };
-      cartContext.addToCart(product, { storePrice: price, mrp: originalPrice, unit: product?.unit }, activeStore, 1);
+      const activeStore = store || product?.store || (product?.storeId ? { id: product.storeId, name: product.storeName || 'Local Store' } : null);
+      if (activeStore) {
+        cartContext.addToCart(product, { storePrice: price, mrp: originalPrice, unit: product?.unit, raw: product.raw || product }, activeStore, 1);
+      }
     }
   };
 
@@ -45,8 +47,10 @@ export default function ProductCard({
     if (onAddToCart) {
       onAddToCart(product, store, qty + 1);
     } else if (cartContext?.addToCart) {
-      const activeStore = store || { id: 'store_02', name: 'Shree Kirana & General Store', slug: 'shree-kirana' };
-      cartContext.addToCart(product, { storePrice: price, mrp: originalPrice, unit: product?.unit }, activeStore, 1);
+      const activeStore = store || product?.store || (product?.storeId ? { id: product.storeId, name: product.storeName || 'Local Store' } : null);
+      if (activeStore) {
+        cartContext.addToCart(product, { storePrice: price, mrp: originalPrice, unit: product?.unit, raw: product.raw || product }, activeStore, 1);
+      }
     }
   };
 
@@ -59,8 +63,9 @@ export default function ProductCard({
     }
   };
 
-  const storeSlug = store?.slug || 'shree-kirana';
-  const detailUrl = `/store/${storeSlug}/product/${product.id}`;
+  const detailUrl = store?.slug
+    ? `/store/${store.slug}/product/${product.id}`
+    : `/product/${product.id}`;
 
   return (
     <div className={styles.card}>

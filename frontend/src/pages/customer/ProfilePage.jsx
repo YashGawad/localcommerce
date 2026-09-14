@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { MOCK_CUSTOMER, MOCK_ADDRESSES } from '../../data/customers';
 import AddressCard from '../../components/customer/AddressCard';
+import addressService from '../../services/addressService';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUUID = (id) => typeof id === 'string' && UUID_REGEX.test(id);
 
 /**
  * Screen 6 — Customer Profile & Addresses (/profile)
@@ -33,11 +37,42 @@ export default function ProfilePage() {
   const [formPincode, setFormPincode] = useState('400602');
   const [formLandmark, setFormLandmark] = useState('');
 
+  const fetchAddresses = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const data = await addressService.getAddresses();
+      if (Array.isArray(data) && data.length > 0) {
+        setAddresses(data);
+      }
+    } catch (err) {
+      console.warn('Could not load addresses from server:', err);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function load() {
+      if (!isAuthenticated) return;
+      try {
+        const data = await addressService.getAddresses();
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setAddresses(data);
+        }
+      } catch (err) {
+        console.warn('Could not load addresses from server:', err);
+      }
+    }
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated]);
+
   const handleOpenAddForm = () => {
     setEditingAddressId(null);
     setFormType('Home');
-    setFormName(customer.name);
-    setFormPhone(customer.phone);
+    setFormName(displayName);
+    setFormPhone(displayPhone);
     setFormAddressLine('');
     setFormArea('Panch Pakhadi');
     setFormCity('Thane West');
@@ -48,22 +83,58 @@ export default function ProfilePage() {
 
   const handleOpenEditForm = (address) => {
     setEditingAddressId(address.id);
-    setFormType(address.type);
-    setFormName(address.recipientName);
-    setFormPhone(address.phone);
-    setFormAddressLine(address.addressLine);
-    setFormArea(address.area);
-    setFormCity(address.city);
-    setFormPincode(address.pincode);
+    setFormType(address.type || 'Home');
+    setFormName(address.recipientName || address.recipient_name || displayName);
+    setFormPhone(address.phone || displayPhone);
+    setFormAddressLine(address.addressLine || address.address_line1 || '');
+    setFormArea(address.area || address.address_line2 || '');
+    setFormCity(address.city || '');
+    setFormPincode(address.pincode || address.postal_code || '');
     setFormLandmark(address.landmark || '');
     setIsFormOpen(true);
   };
 
-  const handleSaveAddress = (e) => {
+  const handleSaveAddress = async (e) => {
     e.preventDefault();
 
     if (!formAddressLine.trim() || !formName.trim()) return;
 
+    if (isAuthenticated) {
+      try {
+        if (editingAddressId && isUUID(editingAddressId)) {
+          await addressService.updateAddress(editingAddressId, {
+            recipient_name: formName,
+            phone: formPhone,
+            address_line1: formAddressLine,
+            address_line2: formArea,
+            city: formCity,
+            state: 'Maharashtra',
+            postal_code: formPincode,
+            landmark: formLandmark,
+          });
+        } else {
+          await addressService.createAddress({
+            recipient_name: formName,
+            phone: formPhone,
+            address_line1: formAddressLine,
+            address_line2: formArea,
+            city: formCity,
+            state: 'Maharashtra',
+            postal_code: formPincode,
+            landmark: formLandmark,
+            is_default: addresses.length === 0,
+          });
+        }
+        await fetchAddresses();
+        setIsFormOpen(false);
+        setEditingAddressId(null);
+        return;
+      } catch (err) {
+        console.error('Failed to save address to server:', err);
+      }
+    }
+
+    // Local fallback
     if (editingAddressId) {
       setAddresses((prev) =>
         prev.map((addr) =>
@@ -102,11 +173,29 @@ export default function ProfilePage() {
     setEditingAddressId(null);
   };
 
-  const handleDeleteAddress = (id) => {
+  const handleDeleteAddress = async (id) => {
+    if (isAuthenticated && isUUID(id)) {
+      try {
+        await addressService.deleteAddress(id);
+        await fetchAddresses();
+        return;
+      } catch (err) {
+        console.error('Failed to delete address on server:', err);
+      }
+    }
     setAddresses((prev) => prev.filter((a) => a.id !== id));
   };
 
-  const handleSetDefault = (id) => {
+  const handleSetDefault = async (id) => {
+    if (isAuthenticated && isUUID(id)) {
+      try {
+        await addressService.updateAddress(id, { is_default: true });
+        await fetchAddresses();
+        return;
+      } catch (err) {
+        console.error('Failed to set default address on server:', err);
+      }
+    }
     setAddresses((prev) =>
       prev.map((a) => ({
         ...a,

@@ -8,6 +8,7 @@ const {
   updateStore,
 } = require('../controllers/storeController');
 const { getStoreReviews } = require('../controllers/reviewController');
+const { getStoreStaff, addStoreStaff } = require('../controllers/staffController');
 const storeProductRoutes = require('./storeProductRoutes');
 const { authenticate } = require('../middleware/authMiddleware');
 const { requireRole } = require('../middleware/roleMiddleware');
@@ -25,6 +26,13 @@ router.get('/slug/:slug', getStoreBySlug);
 // GET /api/stores/:storeId/reviews - Get reviews and aggregate ratings for a store [Public]
 router.get('/:storeId/reviews', getStoreReviews);
 
+// Staff management routes
+// GET /api/stores/:storeId/staff - List store staff [Store Owner / Manager / Admin]
+router.get('/:storeId/staff', authenticate, requireStoreRole('owner', 'manager', { allowAdmin: true }), getStoreStaff);
+
+// POST /api/stores/:storeId/staff - Add staff to store [Store Owner / Manager / Admin]
+router.post('/:storeId/staff', authenticate, requireStoreRole('owner', 'manager', { allowAdmin: true }), addStoreStaff);
+
 // GET /api/stores/:id - Get store by UUID [Public]
 router.get('/:id', getStoreById);
 
@@ -35,3 +43,4 @@ router.post('/', authenticate, requireRole('business_owner', 'admin'), createSto
 router.patch('/:id', authenticate, requireStoreRole('owner', 'manager', { allowAdmin: true }), updateStore);
 
 module.exports = router;
+

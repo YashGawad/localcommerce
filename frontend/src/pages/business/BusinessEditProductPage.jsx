@@ -28,6 +28,8 @@ export default function BusinessEditProductPage() {
 
   const [errors, setErrors] = useState({});
   const [toastMessage, setToastMessage] = useState('');
+  const [apiError, setApiError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!product) {
@@ -68,29 +70,38 @@ export default function BusinessEditProductPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
+    setApiError('');
     if (!validate()) return;
 
-    updateProduct(product.id, {
-      title: formData.title,
-      price: parseFloat(formData.price),
-      cost: parseFloat(formData.cost) || 0,
-      mrp: parseFloat(formData.mrp) || parseFloat(formData.price),
-      sku: formData.sku,
-      barcode: formData.barcode,
-      stock: parseInt(formData.stock, 10),
-      lowStockThreshold: parseInt(formData.lowStockThreshold, 10),
-      aisle: formData.aisle,
-      status: formData.status,
-      description: formData.description,
-      image: formData.image || product.image,
-    });
+    setIsSaving(true);
+    try {
+      await updateProduct(product.id, {
+        title: formData.title,
+        price: parseFloat(formData.price),
+        cost: parseFloat(formData.cost) || 0,
+        mrp: parseFloat(formData.mrp) || parseFloat(formData.price),
+        sku: formData.sku,
+        barcode: formData.barcode,
+        stock: parseInt(formData.stock, 10),
+        lowStockThreshold: parseInt(formData.lowStockThreshold, 10),
+        aisle: formData.aisle,
+        status: formData.status,
+        description: formData.description,
+        image: formData.image || product.image,
+      });
 
-    setToastMessage('Product changes saved successfully!');
-    setTimeout(() => {
-      navigate(`/business/products/${product.id}`);
-    }, 800);
+      setToastMessage('Product changes saved successfully!');
+      setTimeout(() => {
+        navigate(`/business/products/${product.id}`);
+      }, 800);
+    } catch (err) {
+      console.error('Failed to update product:', err);
+      setApiError(err.message || 'Failed to update product.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = () => {
@@ -148,6 +159,24 @@ export default function BusinessEditProductPage() {
         >
           <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>check_circle</span>
           <span style={{ fontSize: '14px', fontWeight: 600 }}>{toastMessage}</span>
+        </div>
+      )}
+
+      {apiError && (
+        <div
+          style={{
+            padding: '16px 20px',
+            backgroundColor: '#FEF2F2',
+            border: '1px solid #FECACA',
+            borderRadius: '8px',
+            color: '#991B1B',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>error</span>
+          <span style={{ fontSize: '14px', fontWeight: 600 }}>{apiError}</span>
         </div>
       )}
 
@@ -468,8 +497,8 @@ export default function BusinessEditProductPage() {
                 Cancel
               </Button>
             </Link>
-            <Button variant="primary" type="submit" icon="save">
-              Save Changes
+            <Button variant="primary" type="submit" icon="save" disabled={isSaving}>
+              {isSaving ? 'Saving Changes...' : 'Save Changes'}
             </Button>
           </div>
         </div>

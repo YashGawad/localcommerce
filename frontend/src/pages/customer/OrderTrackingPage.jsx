@@ -1,35 +1,175 @@
-import { useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MOCK_ORDERS } from '../../data/orders';
 import OrderStatusTimeline from '../../components/customer/OrderStatusTimeline';
+import orderService from '../../services/orderService';
+import paymentService from '../../services/paymentService';
 
 /**
  * Screen 4 — Customer Order Tracking (/orders/:id)
  * Features live order progression timeline, assigned rider card with call action,
- * store hotline, and order summary manifest.
+ * store hotline, order summary manifest, and payment sandbox controls.
  */
 export default function OrderTrackingPage() {
   const { id } = useParams();
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Find order from localStorage or MOCK_ORDERS
-  const order = useMemo(() => {
+  // Payment simulation state
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState(null);
+
+  const fetchOrder = useCallback(async () => {
     try {
-      const local = JSON.parse(localStorage.getItem('localcommerce_orders') || '[]');
-      const foundLocal = local.find(
-        (o) => o.id === id || o.id === `LC-${id}` || o.orderNumber === `#LC-${id}` || o.orderNumber === id
-      );
-      if (foundLocal) return foundLocal;
-    } catch {
-      // Ignore
+      const data = await orderService.getOrderById(id);
+      setOrder(data);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load order:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to load order details');
+    } finally {
+      setLoading(false);
     }
-
-    const foundMock = MOCK_ORDERS.find(
-      (o) => o.id === id || o.id === `LC-${id}` || o.orderNumber === `#LC-${id}` || o.orderNumber === id
-    );
-    return foundMock || MOCK_ORDERS[0];
   }, [id]);
 
+  useEffect(() => {
+    let isMounted = true;
+    async function load() {
+      try {
+        const data = await orderService.getOrderById(id);
+        if (isMounted) {
+          setOrder(data);
+          setError(null);
+        }
+      } catch (err) {
+        console.error('Failed to load order:', err);
+        if (isMounted) {
+          setError(err.response?.data?.message || err.message || 'Failed to load order details');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+    if (id) {
+      load();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  const handleSimulatePayment = async (success) => {
+    if (!order) return;
+    try {
+      setPaymentLoading(true);
+      setPaymentMessage(null);
+      if (success) {
+        await paymentService.mockPaymentSuccess(order.id);
+        setPaymentMessage({ type: 'success', text: 'Payment successfully processed! Order marked as PAID.' });
+      } else {
+        await paymentService.mockPaymentFailure(order.id, 'Card declined by simulated bank');
+        setPaymentMessage({ type: 'error', text: 'Payment simulation: transaction was declined (FAILED).' });
+      }
+      // Refresh order to reflect updated payment status
+      const updated = await orderService.getOrderById(order.id);
+      setOrder(updated);
+    } catch (err) {
+      console.error('Payment simulation error:', err);
+      setPaymentMessage({
+        type: 'error',
+        text: err.response?.data?.message || err.message || 'Payment simulation failed',
+      });
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '64px 16px', textAlign: 'center' }}>
+        <div
+          style={{
+            display: 'inline-block',
+            width: '40px',
+            height: '40px',
+            border: '3px solid #E2E8F0',
+            borderTopColor: '#2563EB',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            marginBottom: '16px',
+          }}
+        />
+        <p style={{ color: '#64748B', fontSize: '15px' }}>Loading real order tracking details...</p>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (error || !order) {
+    return (
+      <div style={{ maxWidth: '640px', margin: '64px auto', padding: '32px 24px', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#EF4444', marginBottom: '12px' }}>
+          error
+        </span>
+        <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#172554', marginBottom: '8px' }}>
+          Unable to Find Order
+        </h2>
+        <p style={{ color: '#64748B', fontSize: '14px', marginBottom: '24px' }}>
+          {error || 'This order does not exist or you do not have permission to view it.'}
+        </p>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <Link
+            to="/orders"
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#2563EB',
+              color: '#FFFFFF',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontWeight: 600,
+              fontSize: '14px',
+            }}
+          >
+            Back to My Orders
+          </Link>
+          <button
+            type="button"
+            onClick={fetchOrder}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#F8FAFC',
+              border: '1px solid #CBD5E1',
+              color: '#475569',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '14px',
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const isDelivery = order.fulfillmentType === 'delivery';
+  const isCod = order.payment_method === 'cod' || order.paymentMethod?.toLowerCase().includes('cash');
+  const isPaymentPending = order.paymentStatus === 'PENDING';
+  const isPaymentPaid = order.paymentStatus === 'PAID';
+  const isPaymentFailed = order.paymentStatus === 'FAILED';
+
+  // Delivery partner fallback info if backend does not yet assign riders
+  const deliveryPartner = order.deliveryPartner || {
+    name: 'Ramesh Shinde',
+    initials: 'RS',
+    role: 'Express Fleet Captain',
+    status: order.status === 'OUT_FOR_DELIVERY' ? 'Out for delivery' : 'Assigned to Hub',
+    phone: '+919820199201',
+    rating: '4.9',
+  };
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 16px 64px 16px' }}>
@@ -79,12 +219,37 @@ export default function OrderTrackingPage() {
                 fontWeight: 700,
                 padding: '3px 10px',
                 borderRadius: '999px',
-                backgroundColor: order.statusBadgeVariant === 'success' ? '#ECFDF5' : '#EFF6FF',
-                color: order.statusBadgeVariant === 'success' ? '#059669' : '#2563EB',
+                backgroundColor:
+                  order.statusBadgeVariant === 'success'
+                    ? '#ECFDF5'
+                    : order.statusBadgeVariant === 'error'
+                    ? '#FEF2F2'
+                    : '#EFF6FF',
+                color:
+                  order.statusBadgeVariant === 'success'
+                    ? '#059669'
+                    : order.statusBadgeVariant === 'error'
+                    ? '#DC2626'
+                    : '#2563EB',
                 textTransform: 'uppercase',
               }}
             >
               {order.statusLabel}
+            </span>
+
+            {/* Payment Status Pill */}
+            <span
+              style={{
+                fontSize: '12px',
+                fontWeight: 700,
+                padding: '3px 10px',
+                borderRadius: '999px',
+                backgroundColor: isPaymentPaid ? '#ECFDF5' : isPaymentFailed ? '#FEF2F2' : '#FFFBEB',
+                color: isPaymentPaid ? '#059669' : isPaymentFailed ? '#DC2626' : '#D97706',
+                textTransform: 'uppercase',
+              }}
+            >
+              {isPaymentPaid ? 'Paid' : isPaymentFailed ? 'Payment Failed' : isCod ? 'COD Pending' : isPaymentPending ? 'Payment Pending' : order.paymentStatus}
             </span>
           </div>
           <p style={{ fontSize: '14px', color: '#64748B', margin: '6px 0 0 0' }}>
@@ -149,6 +314,141 @@ export default function OrderTrackingPage() {
       >
         {/* Left Column: Tracking & Staff Details */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 2, minWidth: 0 }}>
+          {/* Payment simulation notification banner */}
+          {paymentMessage && (
+            <div
+              style={{
+                backgroundColor: paymentMessage.type === 'success' ? '#ECFDF5' : '#FEF2F2',
+                border: `1px solid ${paymentMessage.type === 'success' ? '#A7F3D0' : '#FECACA'}`,
+                borderRadius: '8px',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontSize: '13px',
+                color: paymentMessage.type === 'success' ? '#065F46' : '#991B1B',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                {paymentMessage.type === 'success' ? 'check_circle' : 'error'}
+              </span>
+              <span>{paymentMessage.text}</span>
+            </div>
+          )}
+
+          {/* Payment Action Card for Non-COD orders */}
+          {!isCod && (
+            <div
+              style={{
+                backgroundColor: isPaymentPaid ? '#F0FDF4' : '#FFFBEB',
+                borderRadius: '12px',
+                border: `1px solid ${isPaymentPaid ? '#BBF7D0' : '#FDE68A'}`,
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '22px', color: isPaymentPaid ? '#16A34A' : '#D97706' }}>
+                    {isPaymentPaid ? 'verified' : 'payments'}
+                  </span>
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: '#172554' }}>
+                      {isPaymentPaid ? 'Payment Received & Verified' : 'Online Payment Simulation (Sandbox)'}
+                    </h3>
+                    <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>
+                      Method: <strong>{order.paymentMethod}</strong> • Amount: <strong>₹{order.total}</strong> • Current Status: <strong style={{ color: isPaymentPaid ? '#16A34A' : isPaymentFailed ? '#DC2626' : '#D97706' }}>{order.paymentStatus}</strong>
+                    </p>
+                  </div>
+                </div>
+
+                {isPaymentPaid ? (
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#16A34A', backgroundColor: '#DCFCE7', padding: '4px 10px', borderRadius: '6px' }}>
+                    SETTLED
+                  </span>
+                ) : (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      disabled={paymentLoading}
+                      onClick={() => handleSimulatePayment(true)}
+                      style={{
+                        padding: '8px 14px',
+                        backgroundColor: '#16A34A',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: paymentLoading ? 'not-allowed' : 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                        check_circle
+                      </span>
+                      <span>{paymentLoading ? 'Processing...' : 'Simulate Payment Success'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={paymentLoading}
+                      onClick={() => handleSimulatePayment(false)}
+                      style={{
+                        padding: '8px 14px',
+                        backgroundColor: '#DC2626',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: paymentLoading ? 'not-allowed' : 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                        cancel
+                      </span>
+                      <span>Simulate Payment Failure</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* COD Notice Card */}
+          {isCod && (
+            <div
+              style={{
+                backgroundColor: '#F8FAFC',
+                borderRadius: '12px',
+                border: '1px solid #CBD5E1',
+                padding: '16px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '24px', color: '#475569' }}>
+                payments
+              </span>
+              <div>
+                <strong style={{ fontSize: '14px', color: '#172554', display: 'block' }}>
+                  Cash on Delivery (COD) Order
+                </strong>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0' }}>
+                  Please keep <strong>₹{order.total}</strong> in cash or ready via UPI upon arrival. Online sandbox payment simulation is disabled for COD orders.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Telemetry banner */}
           <div
             style={{
@@ -170,10 +470,10 @@ export default function OrderTrackingPage() {
                 near_me
               </span>
               <span>
-                <strong>Transit Route:</strong> Hariniwas Circle → Panch Pakhadi
+                <strong>Fulfillment Mode:</strong> {order.fulfillmentLabel}
               </span>
             </div>
-            <span style={{ fontSize: '12px', fontWeight: 600 }}>Avg Pace: 18 km/h</span>
+            <span style={{ fontSize: '12px', fontWeight: 600 }}>Status: {order.statusLabel}</span>
           </div>
 
           {/* Fulfillment Progression Timeline Card */}
@@ -191,7 +491,7 @@ export default function OrderTrackingPage() {
                 Fulfillment Progression
               </h2>
               <span style={{ fontSize: '11px', color: '#64748B', fontFamily: 'monospace' }}>
-                LOCAL_EXPRESS_v2
+                LIVE_STATUS_ENGINE
               </span>
             </div>
 
@@ -215,17 +515,17 @@ export default function OrderTrackingPage() {
               </span>
               <div>
                 <strong style={{ fontSize: '13px', color: '#172554', display: 'block' }}>
-                  Streamlined Doorstep Verification
+                  Doorstep & Pickup Verification
                 </strong>
                 <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0 0', lineHeight: 1.4 }}>
-                  No OTP required. Your rider matches package ID #{order.id} upon arrival for zero-friction handover.
+                  Match order reference #{order.orderNumber || order.id} upon arrival for zero-friction handover.
                 </p>
               </div>
             </div>
           </div>
 
           {/* Delivery Staff Assigned Card (if delivery) */}
-          {isDelivery && order.deliveryPartner && (
+          {isDelivery && (
             <div
               style={{
                 backgroundColor: '#FFFFFF',
@@ -256,7 +556,7 @@ export default function OrderTrackingPage() {
                       fontWeight: 700,
                     }}
                   >
-                    {order.deliveryPartner.initials || 'RS'}
+                    {deliveryPartner.initials}
                   </div>
                   <span
                     style={{
@@ -274,7 +574,7 @@ export default function OrderTrackingPage() {
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#172033', margin: 0 }}>
-                      {order.deliveryPartner.name}
+                      {deliveryPartner.name}
                     </h3>
                     <span
                       style={{
@@ -289,21 +589,21 @@ export default function OrderTrackingPage() {
                         borderRadius: '4px',
                       }}
                     >
-                      ★ {order.deliveryPartner.rating}
+                      ★ {deliveryPartner.rating}
                     </span>
                   </div>
                   <span style={{ fontSize: '12px', color: '#64748B', display: 'block', marginTop: '2px' }}>
-                    {order.deliveryPartner.role}
+                    {deliveryPartner.role}
                   </span>
                   <span style={{ fontSize: '12px', color: '#2563EB', fontWeight: 500, display: 'block' }}>
-                    {order.deliveryPartner.status}
+                    {deliveryPartner.status}
                   </span>
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>
                 <a
-                  href={`tel:${order.deliveryPartner.phone}`}
+                  href={`tel:${deliveryPartner.phone}`}
                   style={{
                     padding: '8px 16px',
                     borderRadius: '6px',
@@ -344,9 +644,9 @@ export default function OrderTrackingPage() {
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {order.items?.map((item) => (
+              {order.items?.map((item, idx) => (
                 <div
-                  key={item.id}
+                  key={item.id || idx}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -389,7 +689,7 @@ export default function OrderTrackingPage() {
                     </div>
                   </div>
                   <span style={{ fontSize: '13px', fontWeight: 700, color: '#172033' }}>
-                    ₹{item.price * item.quantity}
+                    ₹{item.total || item.price * item.quantity}
                   </span>
                 </div>
               ))}
@@ -404,12 +704,24 @@ export default function OrderTrackingPage() {
                 <span>Delivery Fee</span>
                 <span>{order.deliveryFee === 0 ? 'FREE' : `₹${order.deliveryFee}`}</span>
               </div>
+              {order.taxAmount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Tax</span>
+                  <span>₹{order.taxAmount}</span>
+                </div>
+              )}
+              {order.discountAmount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16A34A' }}>
+                  <span>Discount</span>
+                  <span>-₹{order.discountAmount}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#172554', fontSize: '15px', paddingTop: '6px' }}>
                 <span>Total Amount</span>
                 <span>₹{order.total}</span>
               </div>
               <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>
-                Paid via {order.paymentMethod} • {order.paymentDetails || 'Direct Settlement'}
+                Payment Method: <strong>{order.paymentMethod}</strong> • Status: <strong>{order.paymentStatus}</strong>
               </div>
             </div>
           </div>
@@ -426,26 +738,32 @@ export default function OrderTrackingPage() {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
               <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#2563EB' }}>
-                home_pin
+                {isDelivery ? 'home_pin' : 'storefront'}
               </span>
               <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#172554', margin: 0 }}>
-                {isDelivery ? 'Drop Location' : 'Store Pickup Location'}
+                {isDelivery ? 'Delivery Drop Location' : 'Store Pickup Location'}
               </h3>
             </div>
-            <strong style={{ fontSize: '14px', color: '#172033' }}>
-              {order.deliveryAddress?.recipientName} ({order.deliveryAddress?.type})
-            </strong>
-            <p style={{ fontSize: '13px', color: '#475569', margin: '4px 0 6px 0', lineHeight: 1.4 }}>
-              {order.deliveryAddress?.addressLine}, {order.deliveryAddress?.area}, {order.deliveryAddress?.city}
-            </p>
-            {order.deliveryAddress?.landmark && (
-              <span style={{ fontSize: '12px', color: '#64748B', display: 'block' }}>
-                Landmark: {order.deliveryAddress.landmark}
-              </span>
-            )}
-            {order.deliveryAddress?.deliveryNote && (
-              <p style={{ fontSize: '12px', color: '#2563EB', backgroundColor: '#EFF6FF', padding: '6px 8px', borderRadius: '4px', margin: '8px 0 0 0' }}>
-                <strong>Note:</strong> {order.deliveryAddress.deliveryNote}
+            {order.deliveryAddress ? (
+              <>
+                <strong style={{ fontSize: '14px', color: '#172033' }}>
+                  {order.deliveryAddress.recipientName || order.deliveryAddress.recipient_name} ({order.deliveryAddress.phone || 'No phone'})
+                </strong>
+                <p style={{ fontSize: '13px', color: '#475569', margin: '4px 0 6px 0', lineHeight: 1.4 }}>
+                  {order.deliveryAddress.addressLine || order.deliveryAddress.address_line1}
+                  {order.deliveryAddress.area ? `, ${order.deliveryAddress.area}` : ''}
+                  {order.deliveryAddress.city ? `, ${order.deliveryAddress.city}` : ''}
+                  {order.deliveryAddress.pincode ? ` - ${order.deliveryAddress.pincode}` : ''}
+                </p>
+                {order.customerNotes && (
+                  <p style={{ fontSize: '12px', color: '#2563EB', backgroundColor: '#EFF6FF', padding: '6px 8px', borderRadius: '4px', margin: '8px 0 0 0' }}>
+                    <strong>Note:</strong> {order.customerNotes}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p style={{ fontSize: '13px', color: '#475569', margin: '4px 0 6px 0', lineHeight: 1.4 }}>
+                Pickup in person at <strong>{order.storeName}</strong> counter.
               </p>
             )}
           </div>

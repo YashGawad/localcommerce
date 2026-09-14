@@ -1,9 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState, useMemo } from 'react';
-import { MOCK_STORES } from '../data/stores';
-import { GLOBAL_PRODUCTS } from '../data/products';
-import { MOCK_CATEGORIES } from '../data/categories';
-import { INITIAL_STORE_SETTINGS } from '../data/storeSettings';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { useAuth } from './AuthContext';
+import { storeService } from '../services/storeService';
+import { categoryService } from '../services/categoryService';
+import { productService } from '../services/productService';
 
 /**
  * Standardized Inventory Status Rule:
@@ -11,7 +11,7 @@ import { INITIAL_STORE_SETTINGS } from '../data/storeSettings';
  * - stock > 0 && stock <= lowStockThreshold => 'Low Stock'
  * - stock === 0 (or negative) => 'Out of Stock'
  */
-export const calculateStockStatus = (stock, lowStockThreshold = 10) => {
+export const calculateStockStatus = (stock, lowStockThreshold = 5) => {
   const s = Number(stock) || 0;
   const t = Number(lowStockThreshold) || 0;
   if (s <= 0) return 'Out of Stock';
@@ -19,396 +19,322 @@ export const calculateStockStatus = (stock, lowStockThreshold = 10) => {
   return 'In Stock';
 };
 
-/**
- * Initial Store Listings Seed Data
- * Separate for each store to preserve multi-tenant context.
- */
-const INITIAL_STORE_PRODUCTS = {
-  store_01: [
-    {
-      id: 'shm_prod_amul_taaza',
-      globalProductId: 'prod_amul_taaza',
-      storeId: 'store_01',
-      title: 'Amul Taaza Homogenised Toned Milk',
-      brand: 'Amul Dairy Co.',
-      category: 'bakery-dairy',
-      categoryName: 'Bakery & Dairy',
-      price: 55,
-      cost: 46,
-      mrp: 56,
-      sku: 'SHM-AML-1000',
-      barcode: '890126201005',
-      stock: 4, // Intentionally low to match Stitch Dashboard "Low stock alert: Amul Taaza 4 units"
-      lowStockThreshold: 10,
-      status: 'Active',
-      image: 'https://lh3.googleusercontent.com/aida/AEtjO1VVsaS-NlV_iizo17KBfTVuGAaanpyY2CDU9p_bkZi5H5HHm-Zs5vkR4b45iuhSP93NY0Wkl9wj43SgRNfTU0HHyFtoHF58-nEW_ZHvJvo_l5094O-UlcNPsvKaDIlLvj-3Q3OKmG8-eeJK_EKg77JRsOA0oYUmkyWjk8RBjHolT0U9nokpEpGDmLtB7fmT3czI-eKsPMvpplTUQceZxAZIlPOlt-ZdJyv4qUtYVpDY1PY6Qkup3p74',
-      unit: '1 Litre Pouch',
-      description: 'Pasteurized homogenized toned milk with 3.0% Fat and 8.5% SNF. Freshly received every morning.',
-      aisle: 'Aisle 2 - Dairy & Chilled',
-      updatedAt: new Date(Date.now() - 3600000).toISOString(),
-    },
-    {
-      id: 'shm_prod_brown_bread',
-      globalProductId: 'prod_brown_bread',
-      storeId: 'store_01',
-      title: 'Modern 100% Whole Wheat Brown Bread',
-      brand: 'Modern Bakery',
-      category: 'bakery-dairy',
-      categoryName: 'Bakery & Dairy',
-      price: 52,
-      cost: 41,
-      mrp: 55,
-      sku: 'SHM-BRD-400G',
-      barcode: '890142205012',
-      stock: 18,
-      lowStockThreshold: 8,
-      status: 'Active',
-      image: 'https://lh3.googleusercontent.com/aida/AEtjO1VddSV2lNmD7RpeuAqExrt8gj-Qmmuvb9gMbJf6wVnOURW0BzidpwnTCPVBeo6zjLBPHCWMoBEkMq3ZPGGA-Fp171Kjv3peivN17ay4_iJb_ZbWIERNnz0vLbB9fykI7hF9nR7CsBxkOGNlYPvdXYZP8AMcjlEcMkjp2C8kO5QiVXtUh4n1x2-Bg7-uqBOB-e6SO1DWz_VD1oX3FiK8_z6qI8Jtt4iGDUJidyYssqXwHDXo1ROUmCtgZg',
-      unit: '400 g Loaf',
-      description: 'Freshly baked whole wheat bread loaf with high fiber content and soft texture.',
-      aisle: 'Aisle 1 - Bakery & Breads',
-      updatedAt: new Date(Date.now() - 7200000).toISOString(),
-    },
-    {
-      id: 'shm_prod_aashirvaad_atta',
-      globalProductId: 'prod_aashirvaad_atta',
-      storeId: 'store_01',
-      title: 'Aashirvaad Superior MP Shudh Chakki Atta',
-      brand: 'ITC Limited',
-      category: 'groceries',
-      categoryName: 'Groceries & Staples',
-      price: 245,
-      cost: 210,
-      mrp: 260,
-      sku: 'SHM-ASH-5KG',
-      barcode: '890103001889',
-      stock: 0, // Intentionally Out of Stock to showcase Out of Stock status
-      lowStockThreshold: 5,
-      status: 'Active',
-      image: 'https://lh3.googleusercontent.com/aida/AEtjO1V1q4rT8T03L38g2sK4j_x_8Xp-g8T4gG-v38aC4P1K0x8a1b0c2d3e4f5g6h7i8j9k0l1m2n3o4p5q6r7s8t9u0v1w2x3y4z5a6b7c8d9e0f1g2h3i4j5k6l7m8n9o0p1q2r3s4t5u6v7w8x9y0z1a2b3c4d5e6f7g8h9i0',
-      unit: '5 kg Pack',
-      description: '100% whole wheat grain chakki-ground flour with zero added maida.',
-      aisle: 'Aisle 4 - Staples & Flours',
-      updatedAt: new Date(Date.now() - 14400000).toISOString(),
-    },
-    {
-      id: 'shm_prod_tata_salt',
-      globalProductId: 'prod_tata_salt',
-      storeId: 'store_01',
-      title: 'Tata Salt Vacuum Evaporated Iodised Salt',
-      brand: 'Tata Consumer',
-      category: 'groceries',
-      categoryName: 'Groceries & Staples',
-      price: 26,
-      cost: 20,
-      mrp: 28,
-      sku: 'SHM-TAT-1KG',
-      barcode: '890103038291',
-      stock: 42,
-      lowStockThreshold: 15,
-      status: 'Active',
-      image: 'https://lh3.googleusercontent.com/aida/AEtjO1Xj_e_y_Z9k0l1m2n3o4p5q6r7s8t9u0v1w2x3y4z5a6b7c8d9e0f1g2h3i4j5k6l7m8n9o0p1q2r3s4t5u6v7w8x9y0z1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t1u2v3w4x5y6z',
-      unit: '1 kg Pouch',
-      description: 'Desh Ka Namak - vacuum-evaporated iodised salt for everyday cooking.',
-      aisle: 'Aisle 3 - Spices & Seasonings',
-      updatedAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      id: 'shm_prod_thums_up_cola',
-      globalProductId: 'prod_thums_up_cola',
-      storeId: 'store_01',
-      title: 'Thums Up Charged Strong Cola Beverage',
-      brand: 'Coca-Cola India',
-      category: 'beverages',
-      categoryName: 'Beverages & Drinks',
-      price: 40,
-      cost: 32,
-      mrp: 45,
-      sku: 'SHM-THM-750M',
-      barcode: '890176401201',
-      stock: 35,
-      lowStockThreshold: 12,
-      status: 'Active',
-      image: 'https://lh3.googleusercontent.com/aida/AEtjO1UVwXyZaBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeFgHiJkLmNoPqRsTuV',
-      unit: '750 ml Bottle',
-      description: 'Carbonated spicy cola drink packed with strong carbonation and fizzy punch.',
-      aisle: 'Aisle 5 - Cold Beverages',
-      updatedAt: new Date(Date.now() - 43200000).toISOString(),
-    },
-    {
-      id: 'shm_prod_fortune_oil',
-      globalProductId: null,
-      storeId: 'store_01',
-      title: 'Fortune Sunlite Refined Sunflower Oil',
-      brand: 'Adani Wilmar',
-      category: 'groceries',
-      categoryName: 'Groceries & Staples',
-      price: 138,
-      cost: 118,
-      mrp: 155,
-      sku: 'SHM-FRT-1L',
-      barcode: '890600728109',
-      stock: 6,
-      lowStockThreshold: 10,
-      status: 'Active',
-      image: 'https://lh3.googleusercontent.com/aida/AEtjO1WWaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz00112233445566778899aabbccddeeffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz',
-      unit: '1 Litre Pouch',
-      description: 'Light and healthy refined sunflower cooking oil enriched with Vitamins A & D.',
-      aisle: 'Aisle 4 - Cooking Oils',
-      updatedAt: new Date(Date.now() - 50000000).toISOString(),
-    },
-  ],
-  store_02: [
-    {
-      id: 'shr_prod_amul_taaza',
-      globalProductId: 'prod_amul_taaza',
-      storeId: 'store_02',
-      title: 'Amul Taaza Homogenised Toned Milk',
-      brand: 'Amul Dairy Co.',
-      category: 'bakery-dairy',
-      categoryName: 'Bakery & Dairy',
-      price: 54,
-      cost: 45,
-      mrp: 56,
-      sku: 'SHR-AML-1000',
-      barcode: '890126201005',
-      stock: 25,
-      lowStockThreshold: 10,
-      status: 'Active',
-      image: 'https://lh3.googleusercontent.com/aida/AEtjO1VVsaS-NlV_iizo17KBfTVuGAaanpyY2CDU9p_bkZi5H5HHm-Zs5vkR4b45iuhSP93NY0Wkl9wj43SgRNfTU0HHyFtoHF58-nEW_ZHvJvo_l5094O-UlcNPsvKaDIlLvj-3Q3OKmG8-eeJK_EKg77JRsOA0oYUmkyWjk8RBjHolT0U9nokpEpGDmLtB7fmT3czI-eKsPMvpplTUQceZxAZIlPOlt-ZdJyv4qUtYVpDY1PY6Qkup3p74',
-      unit: '1 Litre Pouch',
-      description: 'Fresh toned milk stocked daily at Shree Kirana.',
-      aisle: 'Dairy Cooler A1',
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'shr_prod_brown_bread',
-      globalProductId: 'prod_brown_bread',
-      storeId: 'store_02',
-      title: 'Modern 100% Whole Wheat Brown Bread',
-      brand: 'Modern Bakery',
-      category: 'bakery-dairy',
-      categoryName: 'Bakery & Dairy',
-      price: 50,
-      cost: 40,
-      mrp: 55,
-      sku: 'SHR-BRD-400G',
-      barcode: '890142205012',
-      stock: 14,
-      lowStockThreshold: 5,
-      status: 'Active',
-      image: 'https://lh3.googleusercontent.com/aida/AEtjO1VddSV2lNmD7RpeuAqExrt8gj-Qmmuvb9gMbJf6wVnOURW0BzidpwnTCPVBeo6zjLBPHCWMoBEkMq3ZPGGA-Fp171Kjv3peivN17ay4_iJb_ZbWIERNnz0vLbB9fykI7hF9nR7CsBxkOGNlYPvdXYZP8AMcjlEcMkjp2C8kO5QiVXtUh4n1x2-Bg7-uqBOB-e6SO1DWz_VD1oX3FiK8_z6qI8Jtt4iGDUJidyYssqXwHDXo1ROUmCtgZg',
-      unit: '400 g Loaf',
-      description: 'Whole wheat daily bread loaf.',
-      aisle: 'Bread Rack B1',
-      updatedAt: new Date().toISOString(),
-    },
-  ],
-};
-
 const CatalogContext = createContext(null);
 
 export function CatalogProvider({ children }) {
-  // Currently selected store (defaults to Sharma Supermarket)
-  const [currentStore, setCurrentStore] = useState(MOCK_STORES[0]);
+  const { currentUser } = useAuth();
 
-  // Store settings dictionary keyed by storeId
-  const [storeSettingsMap, setStoreSettingsMap] = useState(INITIAL_STORE_SETTINGS);
+  // Stores state
+  const [allStores, setAllStores] = useState([]);
+  const [selectedStoreId, setSelectedStoreId] = useState(() => {
+    return typeof localStorage !== 'undefined'
+      ? localStorage.getItem('localcommerce_selected_store_id') || ''
+      : '';
+  });
+  const [loadingStores, setLoadingStores] = useState(true);
 
-  // Store settings belonging to the currently active store
-  const storeSettings = useMemo(() => {
-    return (
-      storeSettingsMap[currentStore.id] ||
-      INITIAL_STORE_SETTINGS[currentStore.id] || {
-        storeId: currentStore.id,
-        storeName: currentStore.name,
-        acceptingOrders: true,
+  // Catalog data for active currentStore
+  const [storeProducts, setStoreProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [allGlobalProducts, setAllGlobalProducts] = useState([]);
+  const [loadingCatalog, setLoadingCatalog] = useState(false);
+  const [catalogError, setCatalogError] = useState(null);
+
+  // Store online status
+  const [customOnlineState, setCustomOnlineState] = useState(null);
+
+  // 1. Fetch all stores from backend on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadInitialStores() {
+      try {
+        const stores = await storeService.getAllStores();
+        if (isMounted) {
+          setAllStores(stores);
+        }
+      } catch (err) {
+        console.error('Failed to load stores:', err);
+      } finally {
+        if (isMounted) {
+          setLoadingStores(false);
+        }
       }
-    );
-  }, [storeSettingsMap, currentStore.id, currentStore.name]);
-
-  // Store online/offline availability synchronized directly with storeSettings.acceptingOrders
-  const isOnline = storeSettings.acceptingOrders !== undefined ? storeSettings.acceptingOrders : true;
-
-  const updateStoreSettings = (updatedFields) => {
-    setStoreSettingsMap((prev) => {
-      const current =
-        prev[currentStore.id] ||
-        INITIAL_STORE_SETTINGS[currentStore.id] || {
-          storeId: currentStore.id,
-          storeName: currentStore.name,
-          acceptingOrders: true,
-        };
-      return {
-        ...prev,
-        [currentStore.id]: {
-          ...current,
-          ...updatedFields,
-        },
-      };
-    });
-  };
-
-  const setIsOnline = (val) => {
-    updateStoreSettings({ acceptingOrders: !!val });
-  };
-
-  // Store-specific products dictionary keyed by storeId
-  const [storeProductsMap, setStoreProductsMap] = useState(INITIAL_STORE_PRODUCTS);
-
-  // Store categories (initially from MOCK_CATEGORIES)
-  const [categories, setCategories] = useState(MOCK_CATEGORIES);
-
-  // Products belonging to the currently active store
-  const storeProducts = useMemo(() => {
-    return storeProductsMap[currentStore.id] || [];
-  }, [storeProductsMap, currentStore.id]);
-
-  /**
-   * Add a new product to the current store
-   */
-  const addProduct = (productData) => {
-    const newId = `prod_${Date.now()}`;
-    const newProduct = {
-      ...productData,
-      id: newId,
-      storeId: currentStore.id,
-      price: Number(productData.price) || 0,
-      cost: Number(productData.cost) || 0,
-      mrp: Number(productData.mrp) || Number(productData.price) || 0,
-      stock: Math.max(0, Number(productData.stock) || 0),
-      lowStockThreshold: Math.max(0, Number(productData.lowStockThreshold) || 10),
-      status: productData.status || 'Active',
-      updatedAt: new Date().toISOString(),
+    }
+    loadInitialStores();
+    return () => {
+      isMounted = false;
     };
+  }, []);
 
-    setStoreProductsMap((prev) => ({
-      ...prev,
-      [currentStore.id]: [newProduct, ...(prev[currentStore.id] || [])],
-    }));
-
-    return newProduct;
-  };
-
-  /**
-   * Update an existing product in the current store
-   */
-  const updateProduct = (productId, updatedFields) => {
-    setStoreProductsMap((prev) => {
-      const currentList = prev[currentStore.id] || [];
-      const nextList = currentList.map((item) => {
-        if (item.id === productId) {
-          const newStock = updatedFields.stock !== undefined
-            ? Math.max(0, Number(updatedFields.stock))
-            : item.stock;
-
-          const newLowStockThreshold = updatedFields.lowStockThreshold !== undefined
-            ? Math.max(0, Number(updatedFields.lowStockThreshold))
-            : item.lowStockThreshold;
-
-          return {
-            ...item,
-            ...updatedFields,
-            stock: newStock,
-            lowStockThreshold: newLowStockThreshold,
-            price: updatedFields.price !== undefined ? Number(updatedFields.price) : item.price,
-            cost: updatedFields.cost !== undefined ? Number(updatedFields.cost) : item.cost,
-            mrp: updatedFields.mrp !== undefined ? Number(updatedFields.mrp) : item.mrp,
-            updatedAt: new Date().toISOString(),
-          };
+  // Helper to re-fetch all stores from backend on demand
+  const reloadStores = useCallback(async (selectStoreId = null) => {
+    setLoadingStores(true);
+    try {
+      const stores = await storeService.getAllStores();
+      setAllStores(stores);
+      if (selectStoreId) {
+        setSelectedStoreId(selectStoreId);
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('localcommerce_selected_store_id', selectStoreId);
         }
-        return item;
+      }
+      return stores;
+    } catch (err) {
+      console.error('Failed to reload stores:', err);
+      return [];
+    } finally {
+      setLoadingStores(false);
+    }
+  }, []);
+
+  // 2. Compute availableStores for the authenticated user
+  const availableStores = useMemo(() => {
+    if (!currentUser) return allStores;
+    if (currentUser.role === 'admin') return allStores;
+
+    if (currentUser.store_roles && currentUser.store_roles.length > 0) {
+      const allowedIds = new Set(currentUser.store_roles.map((sr) => sr.store_id));
+      const filtered = allStores.filter((s) => allowedIds.has(s.id));
+      return filtered.length > 0 ? filtered : allStores;
+    }
+
+    return allStores;
+  }, [allStores, currentUser]);
+
+  // 3. Derived currentStore
+  const currentStore = useMemo(() => {
+    if (availableStores.length === 0) return null;
+    return (
+      availableStores.find((s) => s.id === selectedStoreId) ||
+      availableStores[0] ||
+      null
+    );
+  }, [availableStores, selectedStoreId]);
+
+  // Save selection whenever currentStore is explicitly changed
+  const handleSetCurrentStore = useCallback((store) => {
+    if (store?.id) {
+      setSelectedStoreId(store.id);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('localcommerce_selected_store_id', store.id);
+      }
+    }
+  }, []);
+
+  const isOnline = customOnlineState !== null ? customOnlineState : currentStore?.status === 'active';
+
+  // 4. Fetch catalog data (products, categories, global products) for currentStore
+  const reloadCatalog = useCallback(async (storeId) => {
+    if (!storeId) return;
+    try {
+      const [cats, globals] = await Promise.all([
+        categoryService.getCategories(storeId).catch(() => []),
+        productService.getGlobalProducts().catch(() => []),
+      ]);
+
+      const categoriesMap = {};
+      cats.forEach((c) => {
+        categoriesMap[c.id] = c;
       });
 
-      return {
-        ...prev,
-        [currentStore.id]: nextList,
-      };
-    });
-  };
+      const prods = await productService.getStoreProducts(storeId, categoriesMap);
 
-  /**
-   * Delete a product from current store
-   */
-  const deleteProduct = (productId) => {
-    setStoreProductsMap((prev) => {
-      const currentList = prev[currentStore.id] || [];
-      return {
-        ...prev,
-        [currentStore.id]: currentList.filter((item) => item.id !== productId),
-      };
-    });
-  };
+      setCategories(cats);
+      setAllGlobalProducts(globals);
+      setStoreProducts(prods);
+      setLoadingCatalog(false);
+      setCatalogError(null);
+    } catch (err) {
+      setCatalogError(err.message || 'Failed to load catalog items');
+      setLoadingCatalog(false);
+    }
+  }, []);
 
-  /**
-   * Adjust stock quantity for an item (e.g. +5, -1, or set absolute count)
-   * Prevents stock from becoming negative (< 0).
-   */
-  const adjustStock = (productId, deltaOrQuantity, isAbsolute = false) => {
-    let resultStock = 0;
-    setStoreProductsMap((prev) => {
-      const currentList = prev[currentStore.id] || [];
-      const nextList = currentList.map((item) => {
-        if (item.id === productId) {
-          const currentQty = Number(item.stock) || 0;
-          const targetQty = isAbsolute
-            ? Number(deltaOrQuantity)
-            : currentQty + Number(deltaOrQuantity);
+  useEffect(() => {
+    const storeId = currentStore?.id;
+    if (!storeId) return;
 
-          resultStock = Math.max(0, targetQty);
-          return {
-            ...item,
-            stock: resultStock,
-            updatedAt: new Date().toISOString(),
-          };
+    let isSubscribed = true;
+    (async () => {
+      try {
+        const [cats, globals] = await Promise.all([
+          categoryService.getCategories(storeId).catch(() => []),
+          productService.getGlobalProducts().catch(() => []),
+        ]);
+
+        const categoriesMap = {};
+        cats.forEach((c) => {
+          categoriesMap[c.id] = c;
+        });
+
+        const prods = await productService.getStoreProducts(storeId, categoriesMap);
+
+        if (isSubscribed) {
+          setCategories(cats);
+          setAllGlobalProducts(globals);
+          setStoreProducts(prods);
+          setLoadingCatalog(false);
+          setCatalogError(null);
         }
-        return item;
-      });
+      } catch (err) {
+        if (isSubscribed) {
+          setCatalogError(err.message || 'Failed to load catalog items');
+          setLoadingCatalog(false);
+        }
+      }
+    })();
 
-      return {
-        ...prev,
-        [currentStore.id]: nextList,
-      };
-    });
-    return resultStock;
+    return () => {
+      isSubscribed = false;
+    };
+  }, [currentStore?.id]);
+
+  // 5. Mutators connected to real backend APIs
+
+  /**
+   * Add product to current store via POST /api/stores/:storeId/products
+   */
+  const addProduct = async (productData) => {
+    if (!currentStore?.id) throw new Error('No store selected');
+
+    const created = await productService.createStoreProduct(currentStore.id, productData);
+    await reloadCatalog(currentStore.id);
+    return created;
   };
 
   /**
-   * Category Management (Add, Update, Delete)
+   * Update product via PATCH /api/stores/:storeId/products/:id
    */
-  const addCategory = (categoryData) => {
-    const newCat = {
-      id: `cat_${Date.now()}`,
-      slug: categoryData.slug || categoryData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+  const updateProduct = async (productId, updatedFields) => {
+    if (!currentStore?.id) throw new Error('No store selected');
+
+    const updated = await productService.updateStoreProduct(currentStore.id, productId, updatedFields);
+    await reloadCatalog(currentStore.id);
+    return updated;
+  };
+
+  /**
+   * Delete or deactivate product
+   */
+  const deleteProduct = async (productId) => {
+    if (!currentStore?.id) return;
+    try {
+      await productService.updateStoreProduct(currentStore.id, productId, { status: 'inactive' });
+      await reloadCatalog(currentStore.id);
+    } catch (err) {
+      console.error('Failed to deactivate product:', err);
+      setStoreProducts((prev) => prev.filter((p) => p.id !== productId));
+    }
+  };
+
+  /**
+   * Adjust stock quantity on backend via PATCH
+   */
+  const adjustStock = async (productId, deltaOrQuantity, isAbsolute = false) => {
+    if (!currentStore?.id) return 0;
+
+    const existing = storeProducts.find((p) => p.id === productId);
+    const currentQty = existing ? Number(existing.stock) : 0;
+    const targetQty = isAbsolute
+      ? Math.max(0, Number(deltaOrQuantity))
+      : Math.max(0, currentQty + Number(deltaOrQuantity));
+
+    // Optimistic local update
+    setStoreProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, stock: targetQty, stock_quantity: targetQty } : p))
+    );
+
+    try {
+      await productService.updateStoreProduct(currentStore.id, productId, {
+        stock: targetQty,
+      });
+      reloadCatalog(currentStore.id);
+    } catch (err) {
+      console.error('Failed to adjust stock on backend:', err);
+      if (existing) {
+        setStoreProducts((prev) =>
+          prev.map((p) => (p.id === productId ? existing : p))
+        );
+      }
+      throw err;
+    }
+
+    return targetQty;
+  };
+
+  /**
+   * Category mutators
+   */
+  const addCategory = async (categoryData) => {
+    if (!currentStore?.id) throw new Error('No store selected');
+
+    const created = await categoryService.createCategory({
+      store_id: currentStore.id,
       name: categoryData.name,
-      storesCount: 1,
-      icon: categoryData.icon || 'category',
-      color: '#EFF6FF',
-      iconColor: '#2563EB',
-      status: categoryData.status || 'Active',
+      description: categoryData.description || null,
+      image_url: categoryData.imageUrl || categoryData.image_url || null,
+      status: categoryData.status || 'active',
+    });
+
+    await reloadCatalog(currentStore.id);
+    return created;
+  };
+
+  const updateCategory = async (categoryId, updatedFields) => {
+    const updated = await categoryService.updateCategory(categoryId, updatedFields);
+    if (currentStore?.id) {
+      await reloadCatalog(currentStore.id);
+    }
+    return updated;
+  };
+
+  const deleteCategory = async (categoryId) => {
+    try {
+      await categoryService.updateCategory(categoryId, { status: 'inactive' });
+      if (currentStore?.id) {
+        await reloadCatalog(currentStore.id);
+      }
+    } catch (err) {
+      console.error('Failed to deactivate category:', err);
+      setCategories((prev) => prev.filter((c) => c.id !== categoryId));
+    }
+  };
+
+  // Mock store settings compatibility
+  const storeSettings = useMemo(() => {
+    return {
+      storeId: currentStore?.id || '',
+      storeName: currentStore?.name || '',
+      acceptingOrders: isOnline,
     };
-    setCategories((prev) => [...prev, newCat]);
-    return newCat;
-  };
+  }, [currentStore, isOnline]);
 
-  const updateCategory = (categoryId, updatedFields) => {
-    setCategories((prev) =>
-      prev.map((c) => (c.id === categoryId ? { ...c, ...updatedFields } : c))
-    );
-  };
-
-  const deleteCategory = (categoryId) => {
-    setCategories((prev) => prev.filter((c) => c.id !== categoryId));
+  const updateStoreSettings = (fields) => {
+    if (fields.acceptingOrders !== undefined) {
+      setCustomOnlineState(!!fields.acceptingOrders);
+    }
   };
 
   const value = {
-    currentStore,
-    setCurrentStore,
+    allStores,
+    availableStores,
+    currentStore: currentStore || {
+      id: '',
+      name: 'Select Store',
+      location: '',
+      status: 'active',
+    },
+    setCurrentStore: handleSetCurrentStore,
     isOnline,
-    setIsOnline,
+    setIsOnline: setCustomOnlineState,
     storeProducts,
-    allGlobalProducts: GLOBAL_PRODUCTS,
+    allGlobalProducts,
     categories,
+    loadingStores,
+    reloadStores,
+    loadingCatalog,
+    catalogError,
+    refreshCatalog: () => currentStore?.id && reloadCatalog(currentStore.id),
     addProduct,
     updateProduct,
     deleteProduct,
@@ -427,7 +353,34 @@ export function CatalogProvider({ children }) {
 export function useCatalog() {
   const context = useContext(CatalogContext);
   if (!context) {
-    throw new Error('useCatalog must be used within a CatalogProvider');
+    return {
+      allStores: [],
+      availableStores: [],
+      currentStore: { id: '', name: 'Select Store', location: '', status: 'active' },
+      setCurrentStore: () => {},
+      isOnline: true,
+      setIsOnline: () => {},
+      storeProducts: [],
+      allGlobalProducts: [],
+      categories: [],
+      loadingStores: false,
+      reloadStores: async () => [],
+      loadingCatalog: false,
+      catalogError: null,
+      refreshCatalog: () => {},
+      addProduct: async () => {},
+      updateProduct: async () => {},
+      deleteProduct: async () => {},
+      adjustStock: async () => {},
+      addCategory: async () => {},
+      updateCategory: async () => {},
+      deleteCategory: async () => {},
+      calculateStockStatus: () => 'In Stock',
+      storeSettings: null,
+      updateStoreSettings: () => {},
+    };
   }
   return context;
 }
+
+export default CatalogContext;

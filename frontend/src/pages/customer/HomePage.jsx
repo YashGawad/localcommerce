@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MOCK_STORES } from '../../data/stores';
-import { MOCK_CATEGORIES } from '../../data/categories';
-import { GLOBAL_PRODUCTS, STORE_LISTINGS } from '../../data/products';
+import storeService from '../../services/storeService';
+import categoryService from '../../services/categoryService';
+import productService from '../../services/productService';
 import ProductCard from '../../components/customer/ProductCard';
 import StoreCard from '../../components/customer/StoreCard';
 import CategoryCard from '../../components/customer/CategoryCard';
@@ -13,26 +13,61 @@ import styles from './HomePage.module.css';
  * Visual Source of Truth: Stitch screen 'LocalCommerce Customer Home' (1febdb1b464a43eeb5dcde244de62c55)
  */
 export default function HomePage() {
-  // Associate popular products with default store listings for the home page showcase
-  const popularProductListings = GLOBAL_PRODUCTS.map((prod) => {
-    // Primary store for Thane zone: Shree Kirana (store_02) or Sharma Supermarket (store_01)
-    const listings = STORE_LISTINGS.store_02 || [];
-    const listing = listings.find((l) => l.productId === prod.id) || {
-      storePrice: prod.mrp - 4,
-      mrp: prod.mrp,
-      inStock: true,
-      availability: 'In Stock',
-    };
-    const store = MOCK_STORES.find((s) => s.id === 'store_02') || MOCK_STORES[0];
+  const [stores, setStores] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [popularProducts, setPopularProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    return {
-      product: prod,
-      store,
-      storePrice: listing.storePrice,
-      mrp: listing.mrp,
-      availability: listing.availability,
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchHomeData() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 1. Fetch active stores
+        const allStores = await storeService.getAllStores();
+        const activeStores = allStores.filter((s) => s.status === 'active');
+
+        // 2. Fetch categories
+        const cats = await categoryService.getCategories();
+
+        // 3. Fetch showcase products from active stores
+        let prods = [];
+        if (activeStores.length > 0) {
+          const storeProductPromises = activeStores.slice(0, 2).map(async (st) => {
+            const list = await productService.getStoreProducts(st.id);
+            return list.map((p) => ({ ...p, store: st }));
+          });
+
+          const results = await Promise.all(storeProductPromises);
+          prods = results.flat().slice(0, 8);
+        }
+
+        if (isMounted) {
+          setStores(activeStores);
+          setCategories(cats);
+          setPopularProducts(prods);
+        }
+      } catch (err) {
+        console.error('Failed to load Home data:', err);
+        if (isMounted) {
+          setError(err.message || 'Unable to connect to LocalCommerce backend');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchHomeData();
+    return () => {
+      isMounted = false;
     };
-  });
+  }, []);
 
   return (
     <div className={styles.container}>
@@ -197,11 +232,21 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className={styles.categoryGrid}>
-          {MOCK_CATEGORIES.map((cat) => (
-            <CategoryCard key={cat.id} category={cat} />
-          ))}
-        </div>
+        {loading ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: '#64748B' }}>
+            Loading categories...
+          </div>
+        ) : categories.length === 0 ? (
+          <div style={{ padding: '16px', color: '#64748B', fontSize: '13px' }}>
+            No categories available at the moment.
+          </div>
+        ) : (
+          <div className={styles.categoryGrid}>
+            {categories.map((cat) => (
+              <CategoryCard key={cat.id} category={cat} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* 3. Nearby Independent Stores */}
@@ -217,11 +262,26 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className={styles.storeGrid}>
-          {MOCK_STORES.map((store) => (
-            <StoreCard key={store.id} store={store} />
-          ))}
-        </div>
+        {loading ? (
+          <div style={{ padding: '36px', textAlign: 'center', color: '#64748B' }}>
+            <div style={{ display: 'inline-block', width: '28px', height: '28px', border: '3px solid #E2E8F0', borderTopColor: '#2563EB', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <div style={{ marginTop: '12px', fontSize: '14px' }}>Discovering local stores...</div>
+          </div>
+        ) : error ? (
+          <div style={{ padding: '20px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', color: '#991B1B' }}>
+            <strong>Unable to load stores:</strong> {error}
+          </div>
+        ) : stores.length === 0 ? (
+          <div style={{ padding: '32px', textAlign: 'center', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', color: '#64748B' }}>
+            No active stores found in your service area.
+          </div>
+        ) : (
+          <div className={styles.storeGrid}>
+            {stores.map((store) => (
+              <StoreCard key={store.id} store={store} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* 4. Popular Products Near You */}
@@ -237,18 +297,28 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className={styles.productGrid}>
-          {popularProductListings.map((item) => (
-            <ProductCard
-              key={item.product.id}
-              product={item.product}
-              store={item.store}
-              storePrice={item.storePrice}
-              mrp={item.mrp}
-              availability={item.availability}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: '#64748B' }}>
+            Loading essentials...
+          </div>
+        ) : popularProducts.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', color: '#64748B', fontSize: '13px' }}>
+            No products listed yet. Check back soon!
+          </div>
+        ) : (
+          <div className={styles.productGrid}>
+            {popularProducts.map((item) => (
+              <ProductCard
+                key={item.id}
+                product={item}
+                store={item.store || stores[0]}
+                storePrice={item.price}
+                mrp={item.mrp}
+                availability={item.availability}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* 5. Why LocalCommerce (Concise, authentic LocalCommerce value pillars matching Stitch) */}

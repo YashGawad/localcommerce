@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, getCurrentUser } = require('../controllers/authController');
+const { register, registerBusiness, login, getCurrentUser } = require('../controllers/authController');
 const { authenticate } = require('../middleware/authMiddleware');
 
 // POST /api/auth/register - Register a new customer
 router.post('/register', register);
+
+// POST /api/auth/business/register - Register a new business owner and initial store
+router.post('/business/register', registerBusiness);
 
 // POST /api/auth/login - Login user
 router.post('/login', login);

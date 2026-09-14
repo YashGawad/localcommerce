@@ -34,8 +34,11 @@ export default function BusinessOrderDetailsPage() {
 
   // Available delivery riders for this store
   const availableRiders = useMemo(() => {
-    return storeStaff.filter((s) => s.role === 'Delivery Staff' && s.status === 'Active');
+    return storeStaff.filter(
+      (s) => (s.role === 'Delivery Staff' || s.rawRole === 'delivery_staff') && s.status === 'Active'
+    );
   }, [storeStaff]);
+
 
   // If order not found in current store
   if (!order) {
@@ -98,35 +101,50 @@ export default function BusinessOrderDetailsPage() {
   }
 
   // Handle Lifecycle State Advances
-  const handleAdvanceStatus = (targetStatus) => {
-    updateOrderStatus(order.id, targetStatus);
-    showToast(`Order updated to ${targetStatus}`);
+  const handleAdvanceStatus = async (targetStatus) => {
+    try {
+      await updateOrderStatus(order.id, targetStatus);
+      showToast(`Order updated to ${targetStatus}`);
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Failed to update order status');
+    }
   };
 
-  const handleConfirmDispatch = () => {
-    const rider = availableRiders.find((r) => r.id === selectedRiderId) || availableRiders[0];
+  const handleConfirmDispatch = async () => {
+    const rider = availableRiders.find((r) => r.id === selectedRiderId || r.userId === selectedRiderId) || availableRiders[0];
     if (!rider) {
       showToast('No active delivery staff selected');
       return;
     }
-    assignRider(order.id, {
-      name: rider.name,
-      initials: rider.avatar || 'DR',
-      phone: rider.phone,
-      role: 'Store Delivery Partner',
-      vehicle: 'Two-Wheeler EV',
-      status: 'En route for delivery',
-      dispatchNotes: dispatchNotes || undefined,
-    });
-    setIsDispatchModalOpen(false);
-    showToast(`Rider ${rider.name} dispatched with order`);
+    try {
+      await assignRider(order.id, {
+        id: rider.id,
+        userId: rider.userId || rider.id,
+        name: rider.name,
+        initials: rider.avatar || 'DR',
+        phone: rider.phone,
+        role: 'Store Delivery Partner',
+        vehicle: 'Two-Wheeler EV',
+        status: 'En route for delivery',
+        dispatchNotes: dispatchNotes || undefined,
+      });
+      setIsDispatchModalOpen(false);
+      showToast(`Rider ${rider.name} assigned to order`);
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Failed to dispatch rider');
+    }
   };
 
-  const handleConfirmCancel = () => {
+
+  const handleConfirmCancel = async () => {
     const reason = cancelReason === 'Other' ? customReason || 'Merchant cancelled' : cancelReason;
-    cancelOrder(order.id, reason);
-    setIsCancelModalOpen(false);
-    showToast('Order has been cancelled');
+    try {
+      await cancelOrder(order.id, reason);
+      setIsCancelModalOpen(false);
+      showToast('Order has been cancelled');
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Failed to cancel order');
+    }
   };
 
   const handlePrint = () => {

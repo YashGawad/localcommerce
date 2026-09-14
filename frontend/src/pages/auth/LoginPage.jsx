@@ -23,7 +23,7 @@ export default function LoginPage() {
     setErrorMessage('');
 
     if (!identifier.trim()) {
-      setErrorMessage('Please enter your email or registered phone number.');
+      setErrorMessage('Please enter your email address.');
       return;
     }
     if (!password) {
@@ -31,7 +31,7 @@ export default function LoginPage() {
       return;
     }
 
-    const result = await login(identifier, password, rememberMe);
+    const result = await login(identifier.trim(), password);
     if (!result.success) {
       setErrorMessage(result.error || 'Authentication failed. Please verify your credentials.');
       return;
@@ -47,7 +47,7 @@ export default function LoginPage() {
 
   const handleFillDevCredentials = (testEmail) => {
     setIdentifier(testEmail);
-    setPassword('password123');
+    setPassword('Password@123');
     setErrorMessage('');
   };
 
@@ -460,6 +460,25 @@ export default function LoginPage() {
           Don't have an account?{' '}
           <Link to="/signup" style={{ color: '#2563EB', fontWeight: 600, textDecoration: 'none' }}>
             Sign Up
+          </Link>
+        </div>
+
+        <div
+          style={{
+            marginTop: '12px',
+            paddingTop: '12px',
+            borderTop: '1px solid #F1F5F9',
+            textAlign: 'center',
+            fontSize: '13px',
+            color: '#64748B',
+          }}
+        >
+          Are you a business owner?{' '}
+          <Link
+            to="/business/onboarding"
+            style={{ color: '#2563EB', fontWeight: 600, textDecoration: 'none' }}
+          >
+            Create a Store
           </Link>
         </div>
       </div>

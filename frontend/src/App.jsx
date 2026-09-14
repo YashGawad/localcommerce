@@ -30,9 +30,11 @@ import ProfilePage from './pages/customer/ProfilePage';
 import LoginPage from './pages/auth/LoginPage';
 import SignUpPage from './pages/auth/SignUpPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import BusinessOnboardingPage from './pages/auth/BusinessOnboardingPage';
 
 // Business Pages (Batch 1, Batch 5 & Batch 6)
 import BusinessDashboardPage from './pages/business/BusinessDashboardPage';
+import BusinessCreateStorePage from './pages/business/BusinessCreateStorePage';
 import BusinessProductsPage from './pages/business/BusinessProductsPage';
 import BusinessAddProductPage from './pages/business/BusinessAddProductPage';
 import BusinessEditProductPage from './pages/business/BusinessEditProductPage';
@@ -84,6 +86,7 @@ export default function App() {
             <Route path="store/:slug" element={<StorePage />} />
             <Route path="store/:slug/products" element={<CategoryListingPage />} />
             <Route path="store/:slug/product/:id" element={<ProductDetailsPage />} />
+            <Route path="product/:id" element={<ProductDetailsPage />} />
             <Route path="search" element={<SearchResultsPage />} />
             <Route path="categories" element={<CategoryListingPage />} />
             <Route path="categories/:category" element={<CategoryListingPage />} />
@@ -101,6 +104,7 @@ export default function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignUpPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/business/onboarding" element={<BusinessOnboardingPage />} />
             </Route>
           </Route>
 
@@ -108,6 +112,7 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={['business_owner', 'staff']} />}>
             <Route path="/business" element={<BusinessLayout />}>
               <Route index element={<BusinessDashboardPage />} />
+              <Route path="create-store" element={<BusinessCreateStorePage />} />
               <Route path="products" element={<BusinessProductsPage />} />
               <Route path="products/new" element={<BusinessAddProductPage />} />
               <Route path="products/:id/edit" element={<BusinessEditProductPage />} />

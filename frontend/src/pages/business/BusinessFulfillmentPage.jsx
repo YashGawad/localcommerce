@@ -23,7 +23,9 @@ export default function BusinessFulfillmentPage() {
 
   // Delivery riders
   const deliveryRiders = useMemo(() => {
-    return storeStaff.filter((s) => s.role === 'Delivery Staff');
+    return storeStaff.filter(
+      (s) => s.role === 'Delivery Staff' || s.rawRole === 'delivery_staff'
+    );
   }, [storeStaff]);
 
   const activeRiders = useMemo(() => {
@@ -57,33 +59,48 @@ export default function BusinessFulfillmentPage() {
     setSelectedRiderId(activeRiders[0]?.id || '');
   };
 
-  const handleConfirmDispatch = () => {
+  const handleConfirmDispatch = async () => {
     if (!dispatchOrder) return;
-    const rider = activeRiders.find((r) => r.id === selectedRiderId) || activeRiders[0];
+    const rider = activeRiders.find((r) => r.id === selectedRiderId || r.userId === selectedRiderId) || activeRiders[0];
     if (!rider) {
       showToast('No active delivery staff available');
       return;
     }
-    assignRider(dispatchOrder.id, {
-      name: rider.name,
-      initials: rider.avatar || 'DR',
-      phone: rider.phone,
-      role: 'Store Delivery Partner',
-      vehicle: 'Two-Wheeler EV',
-      status: 'En route for delivery',
-    });
-    showToast(`Dispatched ${dispatchOrder.orderNumber} with ${rider.name}`);
-    setDispatchOrder(null);
+    try {
+      await assignRider(dispatchOrder.id, {
+        id: rider.id,
+        userId: rider.userId || rider.id,
+        name: rider.name,
+        initials: rider.avatar || 'DR',
+        phone: rider.phone,
+        role: 'Store Delivery Partner',
+        vehicle: 'Two-Wheeler EV',
+        status: 'En route for delivery',
+      });
+      showToast(`Assigned ${dispatchOrder.orderNumber} to ${rider.name}`);
+      setDispatchOrder(null);
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Failed to dispatch order');
+    }
   };
 
-  const handleMarkDelivered = (order) => {
-    updateOrderStatus(order.id, 'DELIVERED');
-    showToast(`Order ${order.orderNumber} marked Delivered`);
+
+  const handleMarkDelivered = async (order) => {
+    try {
+      await updateOrderStatus(order.id, 'DELIVERED');
+      showToast(`Order ${order.orderNumber} marked Delivered`);
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Failed to update order status');
+    }
   };
 
-  const handleMarkPickedUp = (order) => {
-    updateOrderStatus(order.id, 'PICKED_UP');
-    showToast(`Order ${order.orderNumber} marked Picked Up by customer`);
+  const handleMarkPickedUp = async (order) => {
+    try {
+      await updateOrderStatus(order.id, 'PICKED_UP');
+      showToast(`Order ${order.orderNumber} marked Picked Up by customer`);
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Failed to update order status');
+    }
   };
 
   return (

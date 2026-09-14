@@ -109,51 +109,59 @@ export default function BusinessOrdersPage() {
   }, [storeOrders, selectedStatusTab, fulfillmentFilter, paymentFilter, searchQuery, sortBy]);
 
   // Quick Action Handler
-  const handleQuickAdvance = (order, e) => {
+  const handleQuickAdvance = async (order, e) => {
     e.stopPropagation();
-    switch (order.status) {
-      case 'PLACED':
-        updateOrderStatus(order.id, 'CONFIRMED');
-        showToast(`Order ${order.orderNumber} confirmed`);
-        break;
-      case 'CONFIRMED':
-        updateOrderStatus(order.id, 'PREPARING');
-        showToast(`Order ${order.orderNumber} in preparation`);
-        break;
-      case 'PREPARING':
-        if (order.fulfillmentType === 'pickup') {
-          updateOrderStatus(order.id, 'READY_FOR_PICKUP');
-          showToast(`Order ${order.orderNumber} marked Ready for Pickup`);
-        } else {
-          updateOrderStatus(order.id, 'READY');
-          showToast(`Order ${order.orderNumber} marked Ready for Dispatch`);
-        }
-        break;
-      case 'READY':
-        // Delivery order: open details to dispatch or advance
-        navigate(`/business/orders/${order.id}`);
-        break;
-      case 'READY_FOR_PICKUP':
-        // Pickup order: customer collects at store counter
-        updateOrderStatus(order.id, 'PICKED_UP');
-        showToast(`Order ${order.orderNumber} marked Picked Up by customer`);
-        break;
-      case 'OUT_FOR_DELIVERY':
-        updateOrderStatus(order.id, 'DELIVERED');
-        showToast(`Order ${order.orderNumber} marked Delivered`);
-        break;
-      default:
-        break;
+    try {
+      switch (order.status) {
+        case 'PLACED':
+          await updateOrderStatus(order.id, 'CONFIRMED');
+          showToast(`Order ${order.orderNumber} confirmed`);
+          break;
+        case 'CONFIRMED':
+          await updateOrderStatus(order.id, 'PREPARING');
+          showToast(`Order ${order.orderNumber} in preparation`);
+          break;
+        case 'PREPARING':
+          if (order.fulfillmentType === 'pickup') {
+            await updateOrderStatus(order.id, 'READY_FOR_PICKUP');
+            showToast(`Order ${order.orderNumber} marked Ready for Pickup`);
+          } else {
+            await updateOrderStatus(order.id, 'READY');
+            showToast(`Order ${order.orderNumber} marked Ready for Dispatch`);
+          }
+          break;
+        case 'READY':
+          // Delivery order: open details to dispatch or advance
+          navigate(`/business/orders/${order.id}`);
+          break;
+        case 'READY_FOR_PICKUP':
+          // Pickup order: customer collects at store counter
+          await updateOrderStatus(order.id, 'PICKED_UP');
+          showToast(`Order ${order.orderNumber} marked Picked Up by customer`);
+          break;
+        case 'OUT_FOR_DELIVERY':
+          await updateOrderStatus(order.id, 'DELIVERED');
+          showToast(`Order ${order.orderNumber} marked Delivered`);
+          break;
+        default:
+          break;
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Failed to update order status');
     }
   };
 
-  const handleConfirmCancel = () => {
+  const handleConfirmCancel = async () => {
     if (!cancelModalOrder) return;
     const reason = cancelReason === 'Other' ? customReason || 'Merchant cancelled' : cancelReason;
-    cancelOrder(cancelModalOrder.id, reason);
-    showToast(`Order ${cancelModalOrder.orderNumber} cancelled`);
-    setCancelModalOrder(null);
-    setCustomReason('');
+    try {
+      await cancelOrder(cancelModalOrder.id, reason);
+      showToast(`Order ${cancelModalOrder.orderNumber} cancelled`);
+      setCancelModalOrder(null);
+      setCustomReason('');
+    } catch (err) {
+      showToast(err.response?.data?.message || err.message || 'Failed to cancel order');
+    }
   };
 
   const handleExportCSV = () => {

@@ -1,37 +1,87 @@
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MOCK_ORDERS } from '../../data/orders';
 import OrderStatusTimeline from '../../components/customer/OrderStatusTimeline';
+import orderService, { normalizeOrder } from '../../services/orderService';
 
 /**
  * Screen 3 — Customer Order Confirmation (/order-confirmation)
- * Displays immediate order success, human-readable order number #LC-10482,
+ * Displays immediate order success, human-readable real order number,
  * live progression timeline, item manifest, store hotline, and "Track Live Order" CTA.
  */
 export default function OrderConfirmationPage() {
   const location = useLocation();
 
-  // Retrieve placed order from route state, localStorage, or fallback to mock order #LC-10482
-  const order =
-    location.state?.order ||
-    (() => {
+  const [order, setOrder] = useState(() => {
+    return location.state?.order ? normalizeOrder(location.state.order) : null;
+  });
+  const [loading, setLoading] = useState(!location.state?.order);
+
+  useEffect(() => {
+    if (order) return;
+
+    let isMounted = true;
+    async function loadLatestOrder() {
       try {
-        const saved = localStorage.getItem('localcommerce_latest_order');
-        if (saved) return JSON.parse(saved);
-      } catch {
-        // Fallback
+        setLoading(true);
+        const orders = await orderService.getOrders();
+        if (isMounted && orders.length > 0) {
+          setOrder(orders[0]);
+        }
+      } catch (err) {
+        console.error('Failed to load order confirmation:', err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-      return MOCK_ORDERS[0];
-    })();
+    }
 
-  const defaultTimeline = [
-    { step: 1, label: 'Order Placed', time: 'Just now', completed: true, note: 'Order received & routed to neighborhood merchant POS terminal' },
-    { step: 2, label: `Order Confirmed by ${order.storeName}`, time: 'Just now', completed: true, current: true, note: 'Store inventory validated in real-time, store partner packing items' },
-    { step: 3, label: 'Ready for Dispatch', time: 'Est. 10 mins', completed: false, note: 'Handover to dedicated neighborhood delivery rider' },
-    { step: 4, label: 'Out for Delivery', time: 'Est. 20 mins', completed: false, note: 'Rider en route with thermal insulated tote' },
-    { step: 5, label: 'Delivered', time: 'Est. 30 mins', completed: false, note: 'Contactless doorstep verification & receipt' },
-  ];
+    loadLatestOrder();
+    return () => {
+      isMounted = false;
+    };
+  }, [order]);
 
-  const timelineToUse = order.timeline || defaultTimeline;
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '1280px', margin: '60px auto', padding: '0 16px', textAlign: 'center', color: '#64748B' }}>
+        <div style={{ display: 'inline-block', width: '36px', height: '36px', border: '3px solid #E2E8F0', borderTopColor: '#2563EB', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <div style={{ marginTop: '16px', fontSize: '15px', fontWeight: 600 }}>Loading Order Confirmation...</div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div style={{ maxWidth: '640px', margin: '60px auto', padding: '32px 16px', textAlign: 'center' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#94A3B8' }}>
+          receipt_long
+        </span>
+        <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#172554', marginTop: '12px' }}>
+          No Recent Order Found
+        </h2>
+        <p style={{ color: '#64748B', fontSize: '14px', marginTop: '6px' }}>
+          You have not placed an order in this session.
+        </p>
+        <Link to="/" style={{ marginTop: '20px', display: 'inline-block' }}>
+          <button
+            type="button"
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#2563EB',
+              color: '#FFFFFF',
+              borderRadius: '6px',
+              border: 'none',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Explore Stores
+          </button>
+        </Link>
+      </div>
+    );
+  }
+
+  const timelineToUse = order.timeline || [];
 
   return (
     <div style={{ backgroundColor: '#F8FAFC', minHeight: '85vh', paddingBottom: '64px' }}>

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { GLOBAL_PRODUCTS, getListingsForProduct } from '../../data/products';
-import { MOCK_STORES } from '../../data/stores';
+import storeService from '../../services/storeService';
+import productService from '../../services/productService';
 import StoreListingCard from '../../components/customer/StoreListingCard';
 import Button from '../../components/shared/Button';
 import Badge from '../../components/shared/Badge';
@@ -9,32 +9,201 @@ import { useCart } from '../../context/CartContext';
 
 /**
  * Screen 5: Customer Product Details
- * Visual Source of Truth: Stitch screen 'LocalCommerce Product Details - Amul Taaza 1L' (e5d7f49fb167407b989b817dfe39eb62)
- * Demonstrates: Canonical Global Product identity + Fulfilling Local Store selection buy box.
+ * Connects to real global product identity and live store product listings
  */
 export default function ProductDetailsPage() {
-  const { id } = useParams();
+  const { id, slug } = useParams();
 
-  // Find global product or default to Amul Taaza
-  const product = GLOBAL_PRODUCTS.find((p) => p.id === id) || GLOBAL_PRODUCTS[0];
-
-  // Get fulfilling store listings
-  const listings = getListingsForProduct(product.id);
-
-  // Default selected store listing
-  const defaultSelectedStoreId = listings.find((l) => l.isRecommended)?.storeId || listings[0]?.storeId || 'store_02';
-  const [selectedStoreId, setSelectedStoreId] = useState(defaultSelectedStoreId);
-
-  // Selected pack variant
-  const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0]?.name || product.unit);
+  const [product, setProduct] = useState(null);
+  const [listings, setListings] = useState([]);
+  const [storesMap, setStoresMap] = useState({});
+  const [selectedStoreId, setSelectedStoreId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const { addToCart } = useCart();
-  // Add to cart state feedback
   const [cartState, setCartState] = useState({ added: false, count: 0 });
 
-  const activeStore = MOCK_STORES.find((s) => s.id === selectedStoreId) || MOCK_STORES[0];
-  const activeListing = listings.find((l) => l.storeId === selectedStoreId) || listings[0];
-  const isOutOfStock = activeListing?.availability === 'Out of Stock';
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProductAndListings() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // 1. Fetch all active stores for lookup
+        const allStores = await storeService.getAllStores();
+        const activeStores = allStores.filter((s) => s.status === 'active');
+        const sMap = {};
+        activeStores.forEach((st) => {
+          sMap[st.id] = st;
+        });
+
+        let targetProduct = null;
+        let matchedListings = [];
+
+        if (slug) {
+          // Navigated via /store/:slug/product/:id
+          const scopedStore = activeStores.find((s) => s.slug === slug);
+          if (scopedStore) {
+            const sp = await productService.getStoreProductById(scopedStore.id, id);
+            if (sp) {
+              targetProduct = sp;
+              matchedListings.push({
+                storeId: scopedStore.id,
+                storePrice: sp.price,
+                mrp: sp.mrp,
+                availability: sp.availability,
+                isRecommended: true,
+                raw: sp,
+              });
+
+              // If mapped to global product, find other stores offering it
+              if (sp.globalProductId) {
+                const otherStores = activeStores.filter((s) => s.id !== scopedStore.id);
+                for (const ost of otherStores) {
+                  try {
+                    const otherProds = await productService.getStoreProducts(ost.id);
+                    const match = otherProds.find((p) => p.globalProductId === sp.globalProductId);
+                    if (match) {
+                      matchedListings.push({
+                        storeId: ost.id,
+                        storePrice: match.price,
+                        mrp: match.mrp,
+                        availability: match.availability,
+                        isRecommended: false,
+                        raw: match,
+                      });
+                    }
+                  } catch {
+                    // Ignore individual store fetch failures
+                  }
+                }
+              }
+            }
+          }
+        } else {
+          // Direct /product/:id lookup (try global product or store product)
+          try {
+            const gp = await productService.getGlobalProductById(id);
+            if (gp) {
+              targetProduct = gp;
+              for (const st of activeStores) {
+                try {
+                  const storeProds = await productService.getStoreProducts(st.id);
+                  const match = storeProds.find((p) => p.globalProductId === gp.id);
+                  if (match) {
+                    matchedListings.push({
+                      storeId: st.id,
+                      storePrice: match.price,
+                      mrp: match.mrp,
+                      availability: match.availability,
+                      isRecommended: matchedListings.length === 0,
+                      raw: match,
+                    });
+                  }
+                } catch {
+                  // Ignore
+                }
+              }
+            }
+          } catch {
+            // Not a global product UUID, try search across store products
+            for (const st of activeStores) {
+              try {
+                const sp = await productService.getStoreProductById(st.id, id);
+                if (sp) {
+                  targetProduct = sp;
+                  matchedListings.push({
+                    storeId: st.id,
+                    storePrice: sp.price,
+                    mrp: sp.mrp,
+                    availability: sp.availability,
+                    isRecommended: true,
+                    raw: sp,
+                  });
+                  break;
+                }
+              } catch {
+                // Continue searching
+              }
+            }
+          }
+        }
+
+        if (!targetProduct) {
+          throw new Error('Product not found');
+        }
+
+        if (isMounted) {
+          setProduct(targetProduct);
+          setStoresMap(sMap);
+          setListings(matchedListings);
+          if (matchedListings.length > 0) {
+            setSelectedStoreId(matchedListings[0].storeId);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load product details:', err);
+        if (isMounted) {
+          setError(err.message || 'Product not found');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadProductAndListings();
+    return () => {
+      isMounted = false;
+    };
+  }, [id, slug]);
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '1280px', margin: '60px auto', padding: '0 16px', textAlign: 'center', color: '#64748B' }}>
+        <div style={{ display: 'inline-block', width: '36px', height: '36px', border: '3px solid #E2E8F0', borderTopColor: '#2563EB', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <div style={{ marginTop: '16px', fontSize: '15px', fontWeight: 600 }}>Loading product specifications...</div>
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div style={{ maxWidth: '800px', margin: '60px auto', padding: '32px 16px', textAlign: 'center' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#94A3B8' }}>
+          inventory_2
+        </span>
+        <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#172033', marginTop: '12px' }}>
+          Product Not Found
+        </h2>
+        <p style={{ color: '#64748B', marginTop: '6px', fontSize: '14px' }}>
+          The item you requested is not currently listed in our local commerce network.
+        </p>
+        <Link to="/" style={{ marginTop: '20px', display: 'inline-block' }}>
+          <Button variant="primary">Return Home</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const activeStore = storesMap[selectedStoreId] || Object.values(storesMap)[0] || {
+    id: selectedStoreId,
+    name: 'Local Merchant',
+    rating: '4.8',
+    deliveryTime: '20–35 mins',
+  };
+
+  const activeListing = listings.find((l) => l.storeId === selectedStoreId) || listings[0] || {
+    storePrice: product.price || product.mrp,
+    mrp: product.mrp || product.price,
+    availability: 'In Stock',
+  };
+
+  const isOutOfStock = activeListing.availability === 'Out of Stock';
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
@@ -48,9 +217,9 @@ export default function ProductDetailsPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748B' }}>
         <Link to="/" style={{ color: 'inherit' }}>Home</Link>
         <span>›</span>
-        <Link to={`/categories/${product.category}`} style={{ color: 'inherit' }}>{product.categoryName}</Link>
+        <Link to="/categories" style={{ color: 'inherit' }}>Catalog</Link>
         <span>›</span>
-        <span style={{ color: '#172033', fontWeight: 600 }}>{product.title}</span>
+        <span style={{ color: '#172033', fontWeight: 600 }}>{product.title || product.name}</span>
       </div>
 
       {/* 2. Main Dual-Column Product Layout */}
@@ -62,9 +231,8 @@ export default function ProductDetailsPage() {
           alignItems: 'start',
         }}
       >
-        {/* Left Column: Product Imagery Gallery & Aggregate Rating */}
+        {/* Left Column: Imagery & Guarantee */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Main Photo Box */}
           <div
             style={{
               backgroundColor: '#FFFFFF',
@@ -81,140 +249,44 @@ export default function ProductDetailsPage() {
           >
             <img
               src={product.image}
-              alt={product.title}
+              alt={product.title || product.name}
               style={{
                 maxWidth: '100%',
                 maxHeight: '100%',
                 objectFit: 'contain',
               }}
+              onError={(e) => {
+                e.target.src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80';
+              }}
             />
             <div style={{ position: 'absolute', top: '16px', left: '16px' }}>
-              <Badge variant="success" size="sm">Authentic Local Batch</Badge>
+              <Badge variant="success" size="sm">Authentic Local Inventory</Badge>
             </div>
           </div>
 
-          {/* Thumbnail Selector Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-            <div
-              style={{
-                height: '74px',
-                backgroundColor: '#FFFFFF',
-                border: '2px solid #2563EB',
-                borderRadius: '8px',
-                padding: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-            >
-              <img src={product.image} alt="Thumbnail 1" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
-            </div>
-            <div
-              style={{
-                height: '74px',
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #E2E8F0',
-                borderRadius: '8px',
-                padding: '6px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#64748B',
-                fontSize: '11px',
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#2563EB' }}>nutrition</span>
-              <span>Nutrition</span>
-            </div>
-            <div
-              style={{
-                height: '74px',
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #E2E8F0',
-                borderRadius: '8px',
-                padding: '6px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#64748B',
-                fontSize: '11px',
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#10B981' }}>verified</span>
-              <span>Quality Check</span>
-            </div>
-            <div
-              style={{
-                height: '74px',
-                backgroundColor: '#FFFFFF',
-                border: '1px solid #E2E8F0',
-                borderRadius: '8px',
-                padding: '6px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#64748B',
-                fontSize: '11px',
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#F59E0B' }}>qr_code</span>
-              <span>Batch Stamp</span>
-            </div>
-          </div>
-
-          {/* Verified Rating Card */}
           <div
             style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: '#F8FAFC',
               border: '1px solid #E2E8F0',
-              borderRadius: '10px',
-              padding: '16px 20px',
+              borderRadius: '8px',
+              padding: '12px 16px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
+              fontSize: '12px',
+              color: '#64748B',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '8px',
-                  backgroundColor: '#F8FAFC',
-                  border: '1px solid #E2E8F0',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <span style={{ fontSize: '18px', fontWeight: 800, color: '#172033', lineHeight: 1 }}>
-                  {product.rating || '4.8'}
-                </span>
-                <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#F59E0B', fontVariationSettings: "'FILL' 1" }}>
-                  star
-                </span>
-              </div>
-              <div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#172033' }}>
-                  Global Product Rating
-                </div>
-                <div style={{ fontSize: '12px', color: '#64748B' }}>
-                  Based on {product.reviewsCount || 128} verified neighbourhood consumer quality checks
-                </div>
-              </div>
-            </div>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#10B981' }}>verified_user</span>
+              100% Genuine Retailer Product
+            </span>
+            <span>Direct Store Receipt</span>
           </div>
         </div>
 
-        {/* Right Column: Specifications, Variants & Fulfilling Store Buy Box */}
+        {/* Right Column: Title, Identity & Fulfilling Store Buy Box */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Product Header & Description Card */}
           <div
             style={{
               backgroundColor: '#FFFFFF',
@@ -227,96 +299,44 @@ export default function ProductDetailsPage() {
               boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  color: '#2563EB',
-                  backgroundColor: '#EFF6FF',
-                  padding: '3px 8px',
-                  borderRadius: '4px',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                {product.brand}
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              {product.brand && (
+                <span
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: '#2563EB',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  {product.brand}
+                </span>
+              )}
               <span style={{ fontSize: '12px', color: '#065F46', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
                 <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#10B981' }}>bolt</span>
                 Hyperlocal Delivery in 20–35 mins
               </span>
             </div>
 
-            <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#172033', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
-              {product.title}
+            <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#172033', letterSpacing: '-0.02em', lineHeight: 1.25, margin: 0 }}>
+              {product.title || product.name}
             </h1>
 
-            <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.6 }}>
-              {product.description}
-            </p>
-
-            {/* Pack Size Variant Selector */}
-            {product.variants && product.variants.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '4px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#172033', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                  Select Pack Size:
-                </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {product.variants.map((v) => {
-                    const isSelected = selectedVariant === v.name;
-                    return (
-                      <button
-                        key={v.name}
-                        onClick={() => setSelectedVariant(v.name)}
-                        style={{
-                          padding: '6px 14px',
-                          borderRadius: '6px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          backgroundColor: isSelected ? '#172554' : '#F8FAFC',
-                          color: isSelected ? '#FFFFFF' : '#172033',
-                          border: isSelected ? '1px solid #172554' : '1px solid #E2E8F0',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {isSelected && <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>check</span>}
-                        <span>{v.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+            {product.description && (
+              <p style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.6, margin: 0 }}>
+                {product.description}
+              </p>
             )}
 
-            {/* Nutritional Spec Strip */}
-            {product.nutrition && (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
-                  gap: '8px',
-                  backgroundColor: '#F8FAFC',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '8px',
-                  padding: '12px',
-                  marginTop: '4px',
-                }}
-              >
-                {Object.entries(product.nutrition).map(([key, val]) => (
-                  <div key={key} style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '11px', color: '#64748B', textTransform: 'capitalize' }}>{key}</span>
-                    <span style={{ fontSize: '14px', fontWeight: 700, color: '#172033' }}>{val}</span>
-                  </div>
-                ))}
+            {product.unit && (
+              <div style={{ fontSize: '13px', color: '#475569' }}>
+                Unit / Size: <strong>{product.unit}</strong>
               </div>
             )}
           </div>
 
-          {/* 3. CORE LOCALCOMMERCE FEATURE: Choose Fulfilling Local Store */}
+          {/* Fulfill from Local Stores Buy Box */}
           <div
             style={{
               backgroundColor: '#FFFFFF',
@@ -331,32 +351,46 @@ export default function ProductDetailsPage() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '8px' }}>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#172033' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#172033', margin: 0 }}>
                   Fulfill from Local Stores
                 </h2>
-                <p style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-                  Choose which neighborhood store fulfills this order for direct batch quality &amp; speed
+                <p style={{ fontSize: '12px', color: '#64748B', marginTop: '2px', margin: 0 }}>
+                  Select which neighborhood store fulfills this order for direct batch quality &amp; speed
                 </p>
               </div>
-              <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: 600, backgroundColor: '#EFF6FF', padding: '2px 6px', borderRadius: '4px' }}>
-                📍 Near Panch Pakhadi (400602)
-              </span>
             </div>
 
-            {/* Store Listing Cards List */}
+            {/* Store Listing Cards */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {listings.map((listing) => {
-                const store = MOCK_STORES.find((s) => s.id === listing.storeId) || MOCK_STORES[0];
-                return (
-                  <StoreListingCard
-                    key={listing.storeId}
-                    listing={listing}
-                    store={store}
-                    isSelected={selectedStoreId === store.id}
-                    onSelect={(id) => setSelectedStoreId(id)}
-                  />
-                );
-              })}
+              {listings.length === 0 ? (
+                <div style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '8px', color: '#64748B', fontSize: '13px' }}>
+                  Currently not in stock at nearby stores.
+                </div>
+              ) : (
+                listings.map((listing) => {
+                  const store = storesMap[listing.storeId] || {
+                    id: listing.storeId,
+                    name: 'Local Merchant',
+                    rating: '4.8',
+                    reviewCount: 20,
+                    distance: '0.8 km',
+                    location: 'Local Neighborhood',
+                    deliveryTime: '20–35 mins',
+                    minOrder: 100,
+                    freeDeliveryAbove: 499,
+                    fulfillmentTypes: ['delivery', 'pickup'],
+                  };
+                  return (
+                    <StoreListingCard
+                      key={listing.storeId}
+                      listing={listing}
+                      store={store}
+                      isSelected={selectedStoreId === store.id}
+                      onSelect={(id) => setSelectedStoreId(id)}
+                    />
+                  );
+                })
+              )}
             </div>
 
             {/* Buy Box Action Shelf */}
@@ -375,7 +409,7 @@ export default function ProductDetailsPage() {
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '11px', color: '#64748B' }}>Fulfilling via {activeStore.name}</span>
                 <span style={{ fontSize: '24px', fontWeight: 800, color: '#172033' }}>
-                  ₹{activeListing?.storePrice || product.mrp}
+                  ₹{activeListing.storePrice || product.price || product.mrp}
                 </span>
               </div>
 
@@ -383,7 +417,7 @@ export default function ProductDetailsPage() {
                 <Button
                   variant="primary"
                   size="lg"
-                  disabled={isOutOfStock}
+                  disabled={isOutOfStock || listings.length === 0}
                   onClick={handleAddToCart}
                   icon={cartState.added ? 'check_circle' : 'shopping_cart'}
                 >

@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../shared/Logo';
-import { MOCK_STORES } from '../../data/stores';
 import { useAuth } from '../../context/AuthContext';
 import { useCatalog } from '../../context/CatalogContext';
 import { useNotifications } from '../../context/NotificationsContext';
 import styles from './BusinessHeader.module.css';
 
 export default function BusinessHeader({ onOpenNav }) {
-  const { currentStore: selectedStore, setCurrentStore: setSelectedStore, isOnline, setIsOnline } = useCatalog();
+  const {
+    currentStore: selectedStore,
+    setCurrentStore: setSelectedStore,
+    availableStores,
+    isOnline,
+    setIsOnline,
+  } = useCatalog();
   const [isStoreSwitcherOpen, setIsStoreSwitcherOpen] = useState(false);
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -79,7 +84,7 @@ export default function BusinessHeader({ onOpenNav }) {
                 <div style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
                   Switch Active Store
                 </div>
-                {MOCK_STORES.map((store) => (
+                {(availableStores || []).map((store) => (
                   <button
                     key={store.id}
                     onClick={() => {
@@ -98,7 +103,7 @@ export default function BusinessHeader({ onOpenNav }) {
                   >
                     <div>
                       <div style={{ fontSize: '13px', fontWeight: 600, color: '#172033' }}>{store.name}</div>
-                      <div style={{ fontSize: '11px', color: '#64748B' }}>{store.location}</div>
+                      <div style={{ fontSize: '11px', color: '#64748B' }}>{store.city || store.address || ''}</div>
                     </div>
                     {store.id === selectedStore.id && (
                       <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#2563EB' }}>
@@ -107,6 +112,36 @@ export default function BusinessHeader({ onOpenNav }) {
                     )}
                   </button>
                 ))}
+
+                <div style={{ borderTop: '1px solid #E2E8F0', marginTop: '4px', paddingTop: '4px' }}>
+                  <button
+                    onClick={() => {
+                      setIsStoreSwitcherOpen(false);
+                      navigate('/business/create-store');
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      textAlign: 'left',
+                      backgroundColor: 'transparent',
+                      color: '#2563EB',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: 'none',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                      add_circle
+                    </span>
+                    <span>Create New Store</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>

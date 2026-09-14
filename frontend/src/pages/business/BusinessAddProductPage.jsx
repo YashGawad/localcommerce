@@ -28,6 +28,8 @@ export default function BusinessAddProductPage() {
 
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [apiError, setApiError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // When a merchant selects a global catalog item, pre-fill identity fields
   const handleSelectGlobalProduct = (e) => {
@@ -98,24 +100,37 @@ export default function BusinessAddProductPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setApiError('');
     if (!validate()) return;
 
-    const matchedCategory = categories.find((c) => c.slug === formData.category);
+    const matchedCategory = categories.find(
+      (c) => c.slug === formData.category || c.id === formData.category
+    );
 
-    const newProduct = addProduct({
-      ...formData,
-      categoryName: matchedCategory ? matchedCategory.name : 'General',
-      image:
-        formData.image.trim() ||
-        'https://placehold.co/400x400?text=' + encodeURIComponent(formData.title),
-    });
+    setIsSubmitting(true);
+    try {
+      const newProduct = await addProduct({
+        ...formData,
+        global_product_id: selectedGlobalId || null,
+        category_id: matchedCategory ? matchedCategory.id : null,
+        categoryName: matchedCategory ? matchedCategory.name : 'General',
+        image:
+          formData.image.trim() ||
+          'https://placehold.co/400x400?text=' + encodeURIComponent(formData.title),
+      });
 
-    setSuccessMessage(`Product "${newProduct.title}" added to ${currentStore?.name} successfully!`);
-    setTimeout(() => {
-      navigate('/business/products');
-    }, 900);
+      setSuccessMessage(`Product "${newProduct.title || newProduct.name}" added to ${currentStore?.name} successfully!`);
+      setTimeout(() => {
+        navigate('/business/products');
+      }, 900);
+    } catch (err) {
+      console.error('Failed to add product:', err);
+      setApiError(err.message || 'Failed to add product to store catalog.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -152,6 +167,24 @@ export default function BusinessAddProductPage() {
         >
           <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>check_circle</span>
           <span style={{ fontSize: '14px', fontWeight: 600 }}>{successMessage}</span>
+        </div>
+      )}
+
+      {apiError && (
+        <div
+          style={{
+            padding: '16px 20px',
+            backgroundColor: '#FEF2F2',
+            border: '1px solid #FECACA',
+            borderRadius: '8px',
+            color: '#991B1B',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>error</span>
+          <span style={{ fontSize: '14px', fontWeight: 600 }}>{apiError}</span>
         </div>
       )}
 
@@ -685,8 +718,8 @@ export default function BusinessAddProductPage() {
               Cancel
             </Button>
           </Link>
-          <Button variant="primary" type="submit" icon="save">
-            Save &amp; Publish Listing
+          <Button variant="primary" type="submit" icon="save" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving Listing...' : 'Save & Publish Listing'}
           </Button>
         </div>
       </form>

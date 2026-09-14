@@ -52,9 +52,13 @@ export default function BusinessInventoryPage() {
     });
   }, [storeProducts, searchQuery, selectedCategory, activeTab, calculateStockStatus]);
 
-  const handleInlineQuickAdjust = (productId, delta) => {
-    const newStock = adjustStock(productId, delta);
-    setFeedback(`Stock updated to ${newStock} units`);
+  const handleInlineQuickAdjust = async (productId, delta) => {
+    try {
+      const newStock = await adjustStock(productId, delta);
+      setFeedback(`Stock updated to ${newStock} units`);
+    } catch (err) {
+      setFeedback(`Failed to update stock: ${err.message}`);
+    }
     setTimeout(() => setFeedback(''), 2500);
   };
 
@@ -64,22 +68,26 @@ export default function BusinessInventoryPage() {
     setModalValue('5');
   };
 
-  const handleApplyModalAdjustment = (e) => {
+  const handleApplyModalAdjustment = async (e) => {
     e.preventDefault();
     if (!selectedProductForModal) return;
 
     const val = parseInt(modalValue, 10);
     if (isNaN(val)) return;
 
-    let newStock;
-    if (modalMode === 'set') {
-      newStock = adjustStock(selectedProductForModal.id, Math.max(0, val), true);
-    } else {
-      newStock = adjustStock(selectedProductForModal.id, val, false);
-    }
+    try {
+      let newStock;
+      if (modalMode === 'set') {
+        newStock = await adjustStock(selectedProductForModal.id, Math.max(0, val), true);
+      } else {
+        newStock = await adjustStock(selectedProductForModal.id, val, false);
+      }
 
-    setFeedback(`Updated ${selectedProductForModal.title} stock to ${newStock} units.`);
-    setSelectedProductForModal(null);
+      setFeedback(`Updated ${selectedProductForModal.title} stock to ${newStock} units.`);
+      setSelectedProductForModal(null);
+    } catch (err) {
+      setFeedback(`Failed to update stock: ${err.message}`);
+    }
     setTimeout(() => setFeedback(''), 3000);
   };
 

@@ -1,30 +1,80 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MOCK_CATEGORIES } from '../../data/categories';
-import { GLOBAL_PRODUCTS, STORE_LISTINGS } from '../../data/products';
-import { MOCK_STORES, getStoreBySlug } from '../../data/stores';
+import storeService from '../../services/storeService';
+import categoryService from '../../services/categoryService';
+import productService from '../../services/productService';
 import ProductCard from '../../components/customer/ProductCard';
 import Badge from '../../components/shared/Badge';
-import Button from '../../components/shared/Button';
 
 /**
  * Screen 4: Customer Category / Product Listing
- * Visual Source of Truth: Stitch screen 'LocalCommerce Category - Groceries' (eecba68bca6d4f50906be035863d7841)
  * Handles /categories, /categories/:category, and /store/:slug/products
+ * Fully integrated with real store and category endpoints.
  */
 export default function CategoryListingPage() {
   const { category, slug } = useParams();
 
-  // If scoped to a specific store via /store/:slug/products
-  const storeScope = slug ? getStoreBySlug(slug) : null;
-
-  // Selected Category
-  const activeCategory = MOCK_CATEGORIES.find((c) => c.slug === category) || MOCK_CATEGORIES[0];
+  const [stores, setStores] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Filters
-  const [selectedStores, setSelectedStores] = useState(storeScope ? [storeScope.id] : ['store_01', 'store_02']);
+  const [selectedStores, setSelectedStores] = useState([]);
   const [inStockOnly, setInStockOnly] = useState(true);
   const [selectedFulfillment, setSelectedFulfillment] = useState('all');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadData() {
+      try {
+        setLoading(true);
+
+        const [loadedStores, loadedCategories] = await Promise.all([
+          storeService.getAllStores(),
+          categoryService.getCategories(),
+        ]);
+
+        const activeStores = loadedStores.filter((s) => s.status === 'active');
+
+        let targetStores = activeStores;
+        if (slug) {
+          const scopedStore = activeStores.find((s) => s.slug === slug);
+          if (scopedStore) {
+            targetStores = [scopedStore];
+          }
+        }
+
+        // Fetch products for target stores
+        const productPromises = targetStores.map(async (st) => {
+          const list = await productService.getStoreProducts(st.id);
+          return list.map((p) => ({ ...p, store: st }));
+        });
+
+        const storeProductLists = await Promise.all(productPromises);
+        const flatProducts = storeProductLists.flat();
+
+        if (isMounted) {
+          setStores(activeStores);
+          setCategories(loadedCategories);
+          setSelectedStores(targetStores.map((s) => s.id));
+          setProducts(flatProducts);
+        }
+      } catch (err) {
+        console.error('Failed to load category data:', err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadData();
+    return () => {
+      isMounted = false;
+    };
+  }, [category, slug]);
 
   const toggleStore = (storeId) => {
     if (selectedStores.includes(storeId)) {
@@ -34,39 +84,42 @@ export default function CategoryListingPage() {
     }
   };
 
+  const activeCategory =
+    categories.find((c) => c.slug === category || c.id === category) || {
+      name: category ? category.charAt(0).toUpperCase() + category.slice(1) : 'All Departments',
+      description: 'Browse fresh items available from trusted local retailers',
+      icon: 'category',
+    };
+
   // Find products matching the category
-  const matchingProducts = [];
-
-  GLOBAL_PRODUCTS.forEach((prod) => {
-    // If browsing specific category, or browsing all
-    const matchesCategory =
-      !category ||
-      prod.category === category ||
-      (category === 'groceries' && (prod.category === 'groceries' || prod.category === 'bakery-dairy'));
-
-    if (matchesCategory) {
-      MOCK_STORES.forEach((store) => {
-        if (selectedStores.includes(store.id)) {
-          const storeItems = STORE_LISTINGS[store.id] || [];
-          const listing = storeItems.find((item) => item.productId === prod.id);
-
-          if (listing) {
-            if (inStockOnly && listing.availability === 'Out of Stock') return;
-            if (selectedFulfillment === 'delivery' && !store.fulfillmentTypes.includes('delivery')) return;
-            if (selectedFulfillment === 'pickup' && !store.fulfillmentTypes.includes('pickup')) return;
-
-            matchingProducts.push({
-              key: `${prod.id}_${store.id}`,
-              product: prod,
-              store,
-              storePrice: listing.storePrice,
-              mrp: listing.mrp,
-              availability: listing.availability,
-            });
-          }
-        }
-      });
+  const matchingProducts = products.filter((item) => {
+    // Category match
+    if (category && category !== 'all') {
+      const matchSlug = item.category === category;
+      const matchId = item.categoryId === category;
+      const matchName = item.categoryName?.toLowerCase() === category.toLowerCase();
+      if (!matchSlug && !matchId && !matchName) return false;
     }
+
+    // Store match
+    if (selectedStores.length > 0 && !selectedStores.includes(item.storeId)) {
+      return false;
+    }
+
+    // Stock availability
+    if (inStockOnly && item.availability === 'Out of Stock') {
+      return false;
+    }
+
+    // Fulfillment match
+    if (selectedFulfillment === 'delivery' && !item.store?.fulfillmentTypes?.includes('delivery')) {
+      return false;
+    }
+    if (selectedFulfillment === 'pickup' && !item.store?.fulfillmentTypes?.includes('pickup')) {
+      return false;
+    }
+
+    return true;
   });
 
   return (
@@ -100,55 +153,36 @@ export default function CategoryListingPage() {
               width: '54px',
               height: '54px',
               borderRadius: '10px',
-              backgroundColor: activeCategory.color || '#EFF6FF',
-              color: activeCategory.iconColor || '#2563EB',
+              backgroundColor: '#EFF6FF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              color: '#2563EB',
             }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '30px' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>
               {activeCategory.icon || 'shopping_basket'}
             </span>
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#172033', letterSpacing: '-0.015em' }}>
-                {storeScope ? `${storeScope.name} — Catalog` : activeCategory.name}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#172033', letterSpacing: '-0.02em', margin: 0 }}>
+                {activeCategory.name}
               </h1>
-              <Badge variant="info" size="sm">
-                {matchingProducts.length} Items Available
-              </Badge>
+              <Badge variant="info" size="sm">Local Department</Badge>
             </div>
-            <p style={{ fontSize: '13px', color: '#64748B', marginTop: '4px' }}>
-              Daily essentials, groceries, and staples fulfilled directly by participating neighbourhood stores.
+            <p style={{ fontSize: '13px', color: '#64748B', marginTop: '4px', margin: 0 }}>
+              {activeCategory.description || 'Browse everyday items stocked by neighborhood shops'}
             </p>
           </div>
         </div>
 
-        {/* Quick Category switcher pills */}
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {MOCK_CATEGORIES.slice(0, 4).map((c) => (
-            <Link
-              key={c.id}
-              to={`/categories/${c.slug}`}
-              style={{
-                padding: '5px 10px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: 600,
-                backgroundColor: c.slug === category ? '#172554' : '#F1F5F9',
-                color: c.slug === category ? '#FFFFFF' : '#475569',
-                textDecoration: 'none',
-              }}
-            >
-              {c.name}
-            </Link>
-          ))}
+        <div style={{ fontSize: '13px', color: '#64748B' }}>
+          Showing <strong>{matchingProducts.length} items</strong>
         </div>
       </div>
 
-      {/* Main Grid: Filters Column + Products Grid */}
+      {/* Main Grid: Filters + Products */}
       <div
         style={{
           display: 'grid',
@@ -157,7 +191,7 @@ export default function CategoryListingPage() {
           alignItems: 'start',
         }}
       >
-        {/* Left Filter Panel */}
+        {/* Left Filter Column */}
         <aside
           style={{
             backgroundColor: '#FFFFFF',
@@ -168,73 +202,44 @@ export default function CategoryListingPage() {
             flexDirection: 'column',
             gap: '20px',
             boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
-            maxWidth: '280px',
+            maxWidth: '300px',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: '#172033', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#2563EB' }}>tune</span>
-              Filters
-            </span>
-            <button
-              onClick={() => {
-                setSelectedStores(['store_01', 'store_02', 'store_03', 'store_04']);
-                setInStockOnly(false);
-                setSelectedFulfillment('all');
-              }}
-              style={{ fontSize: '11px', color: '#2563EB', fontWeight: 600, textDecoration: 'underline' }}
-            >
-              Reset
-            </button>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#172033', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+            Filter Catalog
           </div>
 
-          {/* Fulfilling Stores */}
+          {/* Stores Filter */}
           <div>
             <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B', letterSpacing: '0.03em', marginBottom: '8px' }}>
-              Fulfilling Stores
+              Stores
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {MOCK_STORES.map((s) => (
-                <label
-                  key={s.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    fontSize: '13px',
-                    color: '#172033',
-                    cursor: 'pointer',
-                    padding: '3px 0',
-                  }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedStores.includes(s.id)}
-                      onChange={() => toggleStore(s.id)}
-                      style={{ accentColor: '#2563EB' }}
-                    />
-                    <span>{s.name}</span>
-                  </span>
-                  <span style={{ fontSize: '11px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '1px 5px', borderRadius: '3px' }}>
-                    {s.distance?.split(' ')[0]}
-                  </span>
+              {stores.map((store) => (
+                <label key={store.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#172033', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedStores.includes(store.id)}
+                    onChange={() => toggleStore(store.id)}
+                    style={{ accentColor: '#2563EB', width: '15px', height: '15px' }}
+                  />
+                  <span>{store.name}</span>
                 </label>
               ))}
             </div>
           </div>
 
-          {/* Stock Status */}
+          {/* Stock Filter */}
           <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B', letterSpacing: '0.03em', marginBottom: '8px' }}>
-              Stock Status
+              Availability
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#172033', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={inStockOnly}
                 onChange={(e) => setInStockOnly(e.target.checked)}
-                style={{ accentColor: '#2563EB' }}
+                style={{ accentColor: '#2563EB', width: '15px', height: '15px' }}
               />
               <span>In Stock Only</span>
             </label>
@@ -243,75 +248,74 @@ export default function CategoryListingPage() {
           {/* Fulfillment Method */}
           <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B', letterSpacing: '0.03em', marginBottom: '8px' }}>
-              Fulfillment Method
+              Fulfillment
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="cat_fulfillment"
-                  checked={selectedFulfillment === 'all'}
-                  onChange={() => setSelectedFulfillment('all')}
-                  style={{ accentColor: '#2563EB' }}
-                />
-                <span>All Options</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="cat_fulfillment"
-                  checked={selectedFulfillment === 'delivery'}
-                  onChange={() => setSelectedFulfillment('delivery')}
-                  style={{ accentColor: '#2563EB' }}
-                />
-                <span>Store Delivery</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="cat_fulfillment"
-                  checked={selectedFulfillment === 'pickup'}
-                  onChange={() => setSelectedFulfillment('pickup')}
-                  style={{ accentColor: '#2563EB' }}
-                />
-                <span>Self Pickup</span>
-              </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: '#172033' }}>
+              {['all', 'delivery', 'pickup'].map((mode) => (
+                <label key={mode} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="cat_fulfillment"
+                    checked={selectedFulfillment === mode}
+                    onChange={() => setSelectedFulfillment(mode)}
+                    style={{ accentColor: '#2563EB' }}
+                  />
+                  <span style={{ textTransform: 'capitalize' }}>{mode === 'all' ? 'All Methods' : mode}</span>
+                </label>
+              ))}
             </div>
           </div>
         </aside>
 
-        {/* Right Product Grid */}
-        <div style={{ flex: 1, minWidth: '320px' }}>
-          {matchingProducts.length === 0 ? (
-            <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '40px', textAlign: 'center' }}>
-              <p style={{ color: '#64748B', fontSize: '14px' }}>No products match your selected filters in this category.</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedStores(['store_01', 'store_02', 'store_03', 'store_04']);
-                  setInStockOnly(false);
-                }}
-                style={{ marginTop: '12px' }}
-              >
-                Clear Filters
-              </Button>
+        {/* Right Products Grid */}
+        <main style={{ flex: 1, minWidth: 0 }}>
+          {loading ? (
+            <div style={{ padding: '48px 16px', textAlign: 'center', color: '#64748B' }}>
+              <div style={{ display: 'inline-block', width: '32px', height: '32px', border: '3px solid #E2E8F0', borderTopColor: '#2563EB', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <div style={{ marginTop: '12px', fontSize: '14px', fontWeight: 500 }}>Loading category products...</div>
+            </div>
+          ) : matchingProducts.length === 0 ? (
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #E2E8F0',
+                borderRadius: '10px',
+                padding: '48px 24px',
+                textAlign: 'center',
+                color: '#64748B',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '48px', color: '#94A3B8' }}>
+                inventory_2
+              </span>
+              <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#172033', marginTop: '12px' }}>
+                No products found in this category
+              </h2>
+              <p style={{ fontSize: '13px', marginTop: '4px' }}>
+                Check back soon or explore other departments from nearby stores.
+              </p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                gap: '16px',
+              }}
+            >
               {matchingProducts.map((item) => (
                 <ProductCard
-                  key={item.key}
-                  product={item.product}
+                  key={`${item.id}_${item.storeId}`}
+                  product={item}
                   store={item.store}
-                  storePrice={item.storePrice}
+                  storePrice={item.price}
                   mrp={item.mrp}
                   availability={item.availability}
                 />
               ))}
             </div>
           )}
-        </div>
+        </main>
       </div>
     </div>
   );
