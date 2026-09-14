@@ -68,4 +68,19 @@ server.on('error', (error) => {
   process.exit(1);
 });
 
+// Graceful shutdown handling for cloud orchestrators (Render) and local termination
+const handleShutdown = (signal) => {
+  console.log(`${signal} signal received: closing HTTP server gracefully`);
+  server.close(() => {
+    console.log('HTTP server closed.');
+    pool.end().then(() => {
+      console.log('PostgreSQL pool closed.');
+      process.exit(0);
+    }).catch(() => process.exit(0));
+  });
+};
+
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+process.on('SIGINT', () => handleShutdown('SIGINT'));
+
 module.exports = server;
