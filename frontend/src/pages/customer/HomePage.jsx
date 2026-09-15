@@ -75,92 +75,34 @@ export default function HomePage() {
       <section className={styles.heroSection}>
         <div className={styles.heroGrid}>
           {/* Left Hero Message */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '4px 10px',
-                borderRadius: '4px',
-                backgroundColor: '#F1EFEA',
-                border: '1px solid #EDE8DF',
-                fontSize: '12px',
-                fontWeight: 600,
-                color: '#172554',
-                alignSelf: 'flex-start',
-              }}
-            >
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
+          <div className={styles.heroLeft}>
+            <div className={styles.heroTag}>
+              <span className={styles.heroTagDot} />
               19 local stores serving your pin code (400602)
             </div>
 
-            <h1
-              style={{
-                fontSize: '34px',
-                fontWeight: 800,
-                color: '#172033',
-                lineHeight: 1.2,
-                letterSpacing: '-0.025em',
-              }}
-            >
+            <h1 className={styles.heroTitle}>
               Shop from independent local stores near you.
             </h1>
 
-            <p style={{ fontSize: '15px', color: '#64748B', lineHeight: 1.6, maxWidth: '580px' }}>
+            <p className={styles.heroSubtitle}>
               Find fresh groceries, daily essentials, and local specialties from trusted neighbourhood shops. Choose fast store-direct delivery or convenient in-store pickup.
             </p>
 
             {/* Fulfilled via tags */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', fontSize: '12px', color: '#64748B', paddingTop: '4px' }}>
+            <div className={styles.fulfillmentTags}>
               <span style={{ fontWeight: 600, color: '#172033' }}>Fulfilled via:</span>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  backgroundColor: '#F6F5F2',
-                  border: '1px solid #E2E8F0',
-                  color: '#172033',
-                  fontWeight: 500,
-                }}
-              >
+              <span className={styles.fulfillmentTagItem}>
                 <span className="material-symbols-outlined" style={{ fontSize: '15px', color: '#10B981' }}>check_circle</span>
                 Store Delivery
               </span>
 
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  backgroundColor: '#F6F5F2',
-                  border: '1px solid #E2E8F0',
-                  color: '#172033',
-                  fontWeight: 500,
-                }}
-              >
+              <span className={styles.fulfillmentTagItem}>
                 <span className="material-symbols-outlined" style={{ fontSize: '15px', color: '#2563EB' }}>storefront</span>
                 Pickup Available
               </span>
 
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  backgroundColor: '#F6F5F2',
-                  border: '1px solid #E2E8F0',
-                  color: '#172033',
-                  fontWeight: 500,
-                }}
-              >
+              <span className={styles.fulfillmentTagItem}>
                 <span className="material-symbols-outlined" style={{ fontSize: '15px', color: '#F59E0B' }}>sell</span>
                 Store-Direct Pricing
               </span>
@@ -168,17 +110,7 @@ export default function HomePage() {
           </div>
 
           {/* Right Service Area Summary Card */}
-          <div
-            style={{
-              backgroundColor: '#F6F5F2',
-              border: '1px solid #E2E8F0',
-              borderRadius: '10px',
-              padding: '24px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-            }}
-          >
+          <div className={styles.serviceSummaryCard}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#2563EB' }} />
@@ -190,19 +122,19 @@ export default function HomePage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
                 <span style={{ color: '#64748B' }}>Selected Location:</span>
                 <strong style={{ color: '#172033' }}>Panch Pakhadi, Thane (400602)</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
                 <span style={{ color: '#64748B' }}>Active Merchants Open:</span>
                 <strong style={{ color: '#10B981' }}>19 local stores available</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
                 <span style={{ color: '#64748B' }}>Estimated Delivery:</span>
                 <strong style={{ color: '#172033' }}>20–35 mins</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
                 <span style={{ color: '#64748B' }}>Store Pricing:</span>
                 <strong style={{ color: '#172033' }}>Set directly by local shop</strong>
               </div>
@@ -218,16 +150,16 @@ export default function HomePage() {
 
       {/* 2. Shop by Category */}
       <section>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
+        <div className={styles.sectionHeader}>
           <div>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#172033', letterSpacing: '-0.01em' }}>
+            <h2 className={styles.sectionTitle}>
               Shop by Category
             </h2>
-            <p style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
+            <p className={styles.sectionSubtitle}>
               Browse essential everyday departments from nearby shops
             </p>
           </div>
-          <Link to="/categories" style={{ fontSize: '13px', color: '#2563EB', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <Link to="/categories" className={styles.sectionLink}>
             View all categories →
           </Link>
         </div>
@@ -251,12 +183,12 @@ export default function HomePage() {
 
       {/* 3. Nearby Independent Stores */}
       <section>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
+        <div className={styles.sectionHeader}>
           <div>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#172033', letterSpacing: '-0.01em' }}>
+            <h2 className={styles.sectionTitle}>
               Nearby Independent Stores
             </h2>
-            <p style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
+            <p className={styles.sectionSubtitle}>
               Trusted neighbourhood retailers delivering directly in your area
             </p>
           </div>
@@ -286,12 +218,12 @@ export default function HomePage() {
 
       {/* 4. Popular Products Near You */}
       <section>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px' }}>
+        <div className={styles.sectionHeader}>
           <div>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#172033', letterSpacing: '-0.01em' }}>
+            <h2 className={styles.sectionTitle}>
               Popular Products Near You
             </h2>
-            <p style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
+            <p className={styles.sectionSubtitle}>
               High-frequency grocery essentials fulfilled by nearby local merchants
             </p>
           </div>
@@ -322,15 +254,7 @@ export default function HomePage() {
       </section>
 
       {/* 5. Why LocalCommerce (Concise, authentic LocalCommerce value pillars matching Stitch) */}
-      <section
-        style={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E2E8F0',
-          borderRadius: '12px',
-          padding: '32px',
-          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
-        }}
-      >
+      <section className={styles.whySection}>
         <div style={{ textAlign: 'center', maxWidth: '640px', margin: '0 auto 28px' }}>
           <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#172033', letterSpacing: '-0.01em' }}>
             Why Order via LocalCommerce?

@@ -38,7 +38,9 @@ export default function BusinessHeader({ onOpenNav }) {
             </span>
           </button>
 
-          <Logo variant="business" to="/business" />
+          <div className={styles.brandWrapper}>
+            <Logo variant="business" to="/business" />
+          </div>
 
           {/* Store Switcher */}
           <div style={{ position: 'relative' }}>

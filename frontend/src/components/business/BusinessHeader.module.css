@@ -141,6 +141,11 @@
   border-color: var(--color-border, #E2E8F0);
 }
 
+.brandWrapper {
+  display: flex;
+  align-items: center;
+}
+
 /* Responsive Media Queries */
 @media (max-width: 840px) {
   .searchContainer {
@@ -153,6 +158,12 @@
 
   .storeNameText {
     max-width: 110px;
+  }
+}
+
+@media (max-width: 580px) {
+  .brandWrapper a > div > div:nth-child(2) {
+    display: none;
   }
 }
 
@@ -180,5 +191,46 @@
 
   .storeNameText {
     max-width: 80px;
+  }
+}
+
+@media (max-width: 380px) {
+  .headerInner {
+    padding: 0 6px;
+    gap: 4px;
+  }
+
+  .leftGroup {
+    gap: 4px;
+  }
+
+  .rightGroup {
+    gap: 4px;
+  }
+
+  .hamburgerBtn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .storeSwitcherBtn {
+    padding: 4px 6px;
+    min-height: 36px;
+  }
+
+  .storeNameText {
+    max-width: 65px;
+    font-size: 11px;
+  }
+
+  .statusToggleBtn {
+    padding: 3px 6px;
+    min-height: 32px;
+    font-size: 11px;
+  }
+
+  .iconActionBtn {
+    width: 36px;
+    height: 36px;
   }
 }

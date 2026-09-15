@@ -203,7 +203,7 @@ export default function CheckoutPage() {
   const storeName = store?.name || 'Shree Kirana & General Store';
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 16px 64px 16px' }}>
+    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: 'clamp(16px, 3vw, 24px) clamp(12px, 2.5vw, 16px) 48px' }}>
       {/* Breadcrumb Navigation */}
       <nav
         style={{

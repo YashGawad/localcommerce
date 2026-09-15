@@ -14,13 +14,13 @@
   background-color: #FFFFFF;
   border: 1px solid var(--color-border, #E2E8F0);
   border-radius: var(--radius-xl, 12px);
-  padding: 36px 32px;
+  padding: 32px 28px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 .heroGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   gap: 32px;
   align-items: center;
 }
@@ -29,6 +29,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .heroTag {
@@ -43,60 +44,80 @@
   font-weight: 600;
   color: var(--color-primary-navy, #172554);
   align-self: flex-start;
+  max-width: 100%;
+}
+
+.heroTagDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10B981;
+  flex-shrink: 0;
 }
 
 .heroTitle {
-  font-size: 32px;
+  font-size: clamp(22px, 4vw, 34px);
   font-weight: 800;
   color: var(--color-text-dark, #172033);
   line-height: 1.2;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   margin: 0;
 }
 
 .heroSubtitle {
-  font-size: 15px;
+  font-size: clamp(13px, 1.8vw, 15px);
   color: var(--color-text-slate, #64748B);
-  line-height: 1.5;
+  line-height: 1.6;
+  max-width: 580px;
   margin: 0;
 }
 
-.heroMetrics {
+.fulfillmentTags {
   display: flex;
-  gap: 24px;
-  margin-top: 8px;
   flex-wrap: wrap;
-}
-
-.metricValue {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-text-dark, #172033);
-}
-
-.metricLabel {
+  align-items: center;
+  gap: 8px;
   font-size: 12px;
-  color: var(--color-text-slate, #64748B);
+  color: #64748B;
+  padding-top: 4px;
 }
 
-.heroRight {
+.fulfillmentTagItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: #F6F5F2;
+  border: 1px solid #E2E8F0;
+  color: #172033;
+  font-weight: 500;
+  font-size: 11px;
+}
+
+.serviceSummaryCard {
+  background-color: #F6F5F2;
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: 10px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  min-width: 0;
 }
 
 .sectionHeader {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
   gap: 8px;
 }
 
 .sectionTitle {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: clamp(18px, 3vw, 20px);
+  font-weight: 800;
   color: var(--color-text-dark, #172033);
   letter-spacing: -0.01em;
   margin: 0;
@@ -105,30 +126,48 @@
 .sectionSubtitle {
   font-size: 13px;
   color: var(--color-text-slate, #64748B);
-  margin-top: 4px;
+  margin-top: 2px;
+}
+
+.sectionLink {
+  font-size: 13px;
+  color: var(--color-primary-blue, #2563EB);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
 }
 
 .categoryGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
   gap: 12px;
 }
 
 .storeGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 16px;
 }
 
 .productGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
   gap: 16px;
+}
+
+.whySection {
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-border, #E2E8F0);
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 .valuePropsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 24px;
 }
 
@@ -140,24 +179,16 @@
   }
 
   .heroSection {
-    padding: 20px 16px;
+    padding: 18px 14px;
   }
 
-  .heroTitle {
-    font-size: 24px;
+  .heroGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
 
-  .heroSubtitle {
-    font-size: 13px;
-  }
-
-  .heroMetrics {
-    gap: 16px;
-  }
-
-  .productGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+  .serviceSummaryCard {
+    padding: 16px;
   }
 
   .categoryGrid {
@@ -169,18 +200,40 @@
     grid-template-columns: 1fr;
     gap: 12px;
   }
+
+  .productGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .whySection {
+    padding: 20px 16px;
+  }
+
+  .valuePropsGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
 
-@media (max-width: 390px) {
+@media (max-width: 480px) {
+  .categoryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .productGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+}
+
+@media (max-width: 360px) {
   .categoryGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .heroSection {
-    padding: 16px 12px;
-  }
-
-  .heroTitle {
-    font-size: 20px;
+    padding: 14px 10px;
   }
 }

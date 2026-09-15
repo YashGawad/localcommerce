@@ -5,6 +5,7 @@ import productService from '../../services/productService';
 import ProductCard from '../../components/customer/ProductCard';
 import Button from '../../components/shared/Button';
 import Badge from '../../components/shared/Badge';
+import styles from './SearchResultsPage.module.css';
 
 /**
  * Screen 2: Customer Search Results
@@ -23,6 +24,7 @@ export default function SearchResultsPage() {
   const [selectedStores, setSelectedStores] = useState([]);
   const [inStockOnly, setInStockOnly] = useState(true);
   const [fulfillmentFilter, setFulfillmentFilter] = useState('all');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -100,22 +102,32 @@ export default function SearchResultsPage() {
   });
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 16px 48px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className={styles.container}>
       {/* Search Header Banner */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '12px' }}>
+      <div className={styles.headerRow}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#172033', letterSpacing: '-0.015em' }}>
+          <div className={styles.headerTitleGroup}>
+            <h1 className={styles.headerTitle}>
               Search Results
             </h1>
             <Badge variant="info" size="sm">Cross-Store Discovery</Badge>
           </div>
-          <p style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
+          <p className={styles.headerSub}>
             Showing <strong>{searchResults.length} results</strong> for "{query}" across nearby neighbourhood stores
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className={styles.filterToggleBtn}
+            aria-label="Toggle search filters"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#2563EB' }}>tune</span>
+            <span>{showMobileFilters ? 'Close Filters' : 'Filters'}</span>
+          </button>
+
           <Button
             variant="ghost"
             size="sm"
@@ -131,30 +143,11 @@ export default function SearchResultsPage() {
       </div>
 
       {/* Main Grid: Filters Column + Results Column */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '24px',
-          alignItems: 'start',
-        }}
-      >
+      <div className={styles.mainLayout}>
         {/* Left Filter Facet Panel */}
-        <aside
-          style={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-            borderRadius: '10px',
-            padding: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px',
-            boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
-            maxWidth: '300px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: '#172033', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <aside className={`${styles.filterAside} ${showMobileFilters ? styles.filterAsideOpen : ''}`}>
+          <div className={styles.filterHeader}>
+            <span className={styles.filterTitle}>
               <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#2563EB' }}>tune</span>
               Refine Results
             </span>
@@ -263,13 +256,7 @@ export default function SearchResultsPage() {
               </p>
             </div>
           ) : (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                gap: '16px',
-              }}
-            >
+            <div className={styles.productGrid}>
               {searchResults.map((item) => (
                 <ProductCard
                   key={`${item.id}_${item.storeId}`}

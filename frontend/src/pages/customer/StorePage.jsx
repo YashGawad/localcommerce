@@ -121,7 +121,7 @@ export default function StorePage() {
   };
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 16px 48px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: 'clamp(16px, 3vw, 24px) clamp(12px, 2vw, 16px) 48px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* 1. Store Header Hero Card */}
       <section
         style={{
@@ -135,7 +135,7 @@ export default function StorePage() {
         {/* Storefront Banner Image */}
         <div
           style={{
-            height: '180px',
+            height: 'clamp(130px, 22vw, 180px)',
             width: '100%',
             backgroundColor: '#F1F5F9',
             position: 'relative',
@@ -320,7 +320,7 @@ export default function StorePage() {
           </div>
 
           {/* Aisle Category Pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '4px', maxWidth: '100%' }}>
             <button
               onClick={() => setActiveCategoryFilter('all')}
               style={{
@@ -396,8 +396,8 @@ export default function StorePage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-              gap: '16px',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 150px), 1fr))',
+              gap: '10px',
             }}
           >
             {filteredProducts.map((item) => (

@@ -5,6 +5,7 @@ import categoryService from '../../services/categoryService';
 import productService from '../../services/productService';
 import ProductCard from '../../components/customer/ProductCard';
 import Badge from '../../components/shared/Badge';
+import styles from './CategoryListingPage.module.css';
 
 /**
  * Screen 4: Customer Category / Product Listing
@@ -23,6 +24,7 @@ export default function CategoryListingPage() {
   const [selectedStores, setSelectedStores] = useState([]);
   const [inStockOnly, setInStockOnly] = useState(true);
   const [selectedFulfillment, setSelectedFulfillment] = useState('all');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -123,9 +125,9 @@ export default function CategoryListingPage() {
   });
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 16px 48px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className={styles.container}>
       {/* Breadcrumbs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748B' }}>
+      <div className={styles.breadcrumbs}>
         <Link to="/" style={{ color: 'inherit' }}>Home</Link>
         <span>›</span>
         <Link to="/categories" style={{ color: 'inherit' }}>Categories</Link>
@@ -134,77 +136,46 @@ export default function CategoryListingPage() {
       </div>
 
       {/* Category Header Banner */}
-      <div
-        style={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E2E8F0',
-          borderRadius: '10px',
-          padding: '24px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '16px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div
-            style={{
-              width: '54px',
-              height: '54px',
-              borderRadius: '10px',
-              backgroundColor: '#EFF6FF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#2563EB',
-            }}
-          >
+      <div className={styles.banner}>
+        <div className={styles.bannerLeft}>
+          <div className={styles.bannerIconBox}>
             <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>
               {activeCategory.icon || 'shopping_basket'}
             </span>
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#172033', letterSpacing: '-0.02em', margin: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <h1 className={styles.bannerTitle}>
                 {activeCategory.name}
               </h1>
               <Badge variant="info" size="sm">Local Department</Badge>
             </div>
-            <p style={{ fontSize: '13px', color: '#64748B', marginTop: '4px', margin: 0 }}>
+            <p className={styles.bannerSub}>
               {activeCategory.description || 'Browse everyday items stocked by neighborhood shops'}
             </p>
           </div>
         </div>
 
-        <div style={{ fontSize: '13px', color: '#64748B' }}>
-          Showing <strong>{matchingProducts.length} items</strong>
+        <div className={styles.bannerRight}>
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className={styles.filterToggleBtn}
+            aria-label="Toggle category filters"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px', color: '#2563EB' }}>tune</span>
+            <span>{showMobileFilters ? 'Close Filters' : 'Filters'}</span>
+          </button>
+          <div style={{ fontSize: '13px', color: '#64748B' }}>
+            Showing <strong>{matchingProducts.length} items</strong>
+          </div>
         </div>
       </div>
 
       {/* Main Grid: Filters + Products */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '24px',
-          alignItems: 'start',
-        }}
-      >
+      <div className={styles.mainLayout}>
         {/* Left Filter Column */}
-        <aside
-          style={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E2E8F0',
-            borderRadius: '10px',
-            padding: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px',
-            boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
-            maxWidth: '300px',
-          }}
-        >
+        <aside className={`${styles.filterAside} ${showMobileFilters ? styles.filterAsideOpen : ''}`}>
           <div style={{ fontSize: '14px', fontWeight: 700, color: '#172033', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
             Filter Catalog
           </div>
@@ -296,13 +267,7 @@ export default function CategoryListingPage() {
               </p>
             </div>
           ) : (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                gap: '16px',
-              }}
-            >
+            <div className={styles.productGrid}>
               {matchingProducts.map((item) => (
                 <ProductCard
                   key={`${item.id}_${item.storeId}`}

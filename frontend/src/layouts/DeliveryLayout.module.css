@@ -119,11 +119,41 @@
     padding: 0 10px;
   }
 
+  .leftGroup a > div > div:nth-child(2) {
+    display: none;
+  }
+
   .staffName {
     display: none;
   }
 
   .storefrontLink {
     display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .header {
+    padding: 0 6px;
+  }
+
+  .leftGroup {
+    gap: 6px;
+  }
+
+  .rightGroup {
+    gap: 6px;
+  }
+
+  .dutyBtn {
+    padding: 4px 8px;
+    font-size: 11px;
+    min-height: 32px;
+  }
+
+  .exitBtn {
+    padding: 4px 6px;
+    font-size: 11px;
+    min-height: 32px;
   }
 }

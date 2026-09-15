@@ -212,9 +212,9 @@ export default function ProductDetailsPage() {
   };
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 16px 48px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: 'clamp(16px, 3vw, 24px) clamp(12px, 2vw, 16px) 48px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* 1. Breadcrumb Strip */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748B' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748B', flexWrap: 'wrap' }}>
         <Link to="/" style={{ color: 'inherit' }}>Home</Link>
         <span>›</span>
         <Link to="/categories" style={{ color: 'inherit' }}>Catalog</Link>
@@ -227,7 +227,7 @@ export default function ProductDetailsPage() {
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
-          gap: '32px',
+          gap: '24px',
           alignItems: 'start',
         }}
       >
@@ -238,11 +238,11 @@ export default function ProductDetailsPage() {
               backgroundColor: '#FFFFFF',
               border: '1px solid #E2E8F0',
               borderRadius: '12px',
-              padding: '24px',
+              padding: 'clamp(14px, 2vw, 24px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              height: '380px',
+              height: 'clamp(240px, 35vw, 380px)',
               position: 'relative',
               boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
             }}
@@ -413,13 +413,14 @@ export default function ProductDetailsPage() {
                 </span>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', width: '100%', maxWidth: '380px' }}>
                 <Button
                   variant="primary"
                   size="lg"
                   disabled={isOutOfStock || listings.length === 0}
                   onClick={handleAddToCart}
                   icon={cartState.added ? 'check_circle' : 'shopping_cart'}
+                  style={{ flex: '1 1 180px' }}
                 >
                   {isOutOfStock
                     ? 'Store Out of Stock'
@@ -428,8 +429,8 @@ export default function ProductDetailsPage() {
                     : `Add to ${activeStore.name.split(' ')[0]} Cart`}
                 </Button>
 
-                <Link to="/cart">
-                  <Button variant="outline" size="lg">
+                <Link to="/cart" style={{ flex: '1 1 120px' }}>
+                  <Button variant="outline" size="lg" style={{ width: '100%' }}>
                     View Cart
                   </Button>
                 </Link>

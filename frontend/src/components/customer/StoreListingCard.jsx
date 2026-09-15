@@ -55,7 +55,7 @@ export default function StoreListingCard({
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
         {/* Left: Radio + Store Details */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, minWidth: '240px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, minWidth: 'min(100%, 180px)' }}>
           {/* Radio Indicator */}
           <div
             style={{
