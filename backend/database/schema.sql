@@ -303,7 +303,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
     CONSTRAINT orders_order_number_key UNIQUE (order_number),
     CONSTRAINT orders_fulfillment_type_check CHECK (((fulfillment_type)::text = ANY ((ARRAY['pickup'::character varying, 'delivery'::character varying])::text[]))),
     CONSTRAINT orders_payment_status_check CHECK (((payment_status)::text = ANY ((ARRAY['PENDING'::character varying, 'PAID'::character varying, 'FAILED'::character varying, 'REFUNDED'::character varying])::text[]))),
-    CONSTRAINT orders_status_check CHECK (((status)::text = ANY ((ARRAY['PLACED'::character varying, 'CONFIRMED'::character varying, 'PREPARING'::character varying, 'READY_FOR_PICKUP'::character varying, 'OUT_FOR_DELIVERY'::character varying, 'DELIVERED'::character varying, 'CANCELLED'::character varying])::text[]))),
+    CONSTRAINT orders_status_check CHECK (((status)::text = ANY ((ARRAY['PLACED'::character varying, 'CONFIRMED'::character varying, 'PREPARING'::character varying, 'READY'::character varying, 'OUT_FOR_DELIVERY'::character varying, 'DELIVERED'::character varying, 'READY_FOR_PICKUP'::character varying, 'PICKED_UP'::character varying, 'CANCELLED'::character varying])::text[]))),
     CONSTRAINT orders_store_id_fkey FOREIGN KEY (store_id) REFERENCES public.stores(id),
     CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id),
     CONSTRAINT orders_discount_id_fkey FOREIGN KEY (discount_id) REFERENCES public.discounts(id) ON DELETE SET NULL
